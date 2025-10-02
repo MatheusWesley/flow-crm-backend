@@ -1,0 +1,791 @@
+{
+    "info": {
+        "name": "Flow CRM API",
+        "description": "REST API para sistema de CRM com gestão de clientes, produtos e pré-vendas",
+        "version": "1.0.0",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "Health & Test",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/health",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        },
+                        "description": "Verificação de saúde da API"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "API Test",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/test",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "test"
+                            ]
+                        },
+                        "description": "Endpoint de teste da API"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const response = pm.response.json();",
+                                    "    if (response.data && response.data.token) {",
+                                    "        pm.collectionVariables.set('token', response.data.token);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"admin@flowcrm.com\",\n  \"password\": \"admin123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Autenticação de usuário"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Register User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Nome do Usuário\",\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"employee\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "description": "Registro de novo usuário (apenas admin)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/me",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "me"
+                            ]
+                        },
+                        "description": "Obter perfil do usuário atual"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/logout",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "logout"
+                            ]
+                        },
+                        "description": "Logout do usuário"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Customers",
+            "item": [
+                {
+                    "name": "List Customers",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/customers?page=1&limit=10&sortBy=name&sortOrder=asc",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "customers"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Número da página"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Itens por página"
+                                },
+                                {
+                                    "key": "sortBy",
+                                    "value": "name",
+                                    "description": "Campo para ordenação (name|email|createdAt)"
+                                },
+                                {
+                                    "key": "sortOrder",
+                                    "value": "asc",
+                                    "description": "Ordem (asc|desc)"
+                                },
+                                {
+                                    "key": "name",
+                                    "value": "",
+                                    "description": "Filtro por nome",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "email",
+                                    "value": "",
+                                    "description": "Filtro por email",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "cpf",
+                                    "value": "",
+                                    "description": "Filtro por CPF",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Busca geral",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Listar clientes com filtros"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Customer",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/customers/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "customers",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "customer-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Obter cliente por ID"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Customer",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao@example.com\",\n  \"phone\": \"(11) 99999-9999\",\n  \"cpf\": \"123.456.789-00\",\n  \"address\": \"Rua das Flores, 123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/customers",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "customers"
+                            ]
+                        },
+                        "description": "Criar novo cliente"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Customer",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"João Silva Atualizado\",\n  \"email\": \"joao.novo@example.com\",\n  \"phone\": \"(11) 88888-8888\",\n  \"address\": \"Novo endereço\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/customers/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "customers",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "customer-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Atualizar cliente"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Customer",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/customers/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "customers",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "customer-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Deletar cliente"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Products",
+            "item": [
+                {
+                    "name": "List Products",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/products?page=1&limit=10&sortBy=name&sortOrder=asc",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "products"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Número da página"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Itens por página"
+                                },
+                                {
+                                    "key": "sortBy",
+                                    "value": "name",
+                                    "description": "Campo para ordenação (code|name|stock|salePrice|createdAt)"
+                                },
+                                {
+                                    "key": "sortOrder",
+                                    "value": "asc",
+                                    "description": "Ordem (asc|desc)"
+                                },
+                                {
+                                    "key": "code",
+                                    "value": "",
+                                    "description": "Filtro por código",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "name",
+                                    "value": "",
+                                    "description": "Filtro por nome",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "saleType",
+                                    "value": "",
+                                    "description": "Filtro por tipo de venda",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Busca geral",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "minStock",
+                                    "value": "",
+                                    "description": "Estoque mínimo",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "maxStock",
+                                    "value": "",
+                                    "description": "Estoque máximo",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Listar produtos com filtros"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Product",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/products/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "products",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "product-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Obter produto por ID"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Product",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"code\": \"PROD001\",\n  \"name\": \"Produto Exemplo\",\n  \"unit\": \"UN\",\n  \"description\": \"Descrição do produto\",\n  \"stock\": 100,\n  \"purchasePrice\": \"10.50\",\n  \"salePrice\": \"15.75\",\n  \"saleType\": \"unit\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/products",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "products"
+                            ]
+                        },
+                        "description": "Criar novo produto"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Product",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Produto Atualizado\",\n  \"stock\": 150,\n  \"salePrice\": \"18.00\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/products/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "products",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "product-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Atualizar produto"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Product",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/products/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "products",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "product-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Deletar produto"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Presales",
+            "item": [
+                {
+                    "name": "List Presales",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/presales?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "presales"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Número da página"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Itens por página"
+                                },
+                                {
+                                    "key": "sortBy",
+                                    "value": "createdAt",
+                                    "description": "Campo para ordenação (createdAt|total|status)"
+                                },
+                                {
+                                    "key": "sortOrder",
+                                    "value": "desc",
+                                    "description": "Ordem (asc|desc)"
+                                },
+                                {
+                                    "key": "customerId",
+                                    "value": "",
+                                    "description": "Filtro por cliente",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "",
+                                    "description": "Filtro por status (draft|pending|approved|cancelled|converted)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "customerName",
+                                    "value": "",
+                                    "description": "Filtro por nome do cliente",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "dateFrom",
+                                    "value": "",
+                                    "description": "Data inicial (YYYY-MM-DD)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "dateTo",
+                                    "value": "",
+                                    "description": "Data final (YYYY-MM-DD)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Busca geral",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Listar pré-vendas com filtros"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Presale",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/presales/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "presales",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "presale-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Obter pré-venda por ID com itens"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Presale",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"customerId\": \"customer-uuid-here\",\n  \"discount\": \"10.00\",\n  \"notes\": \"Pré-venda de exemplo\",\n  \"items\": [\n    {\n      \"productId\": \"product-uuid-here\",\n      \"quantity\": 2,\n      \"unitPrice\": \"15.75\"\n    }\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/presales",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "presales"
+                            ]
+                        },
+                        "description": "Criar nova pré-venda"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Presale",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"discount\": \"15.00\",\n  \"notes\": \"Pré-venda atualizada\",\n  \"items\": [\n    {\n      \"productId\": \"product-uuid-here\",\n      \"quantity\": 3,\n      \"unitPrice\": \"15.75\"\n    }\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/presales/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "presales",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "presale-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Atualizar pré-venda"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Presale Status",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"approved\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/presales/:id/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "presales",
+                                ":id",
+                                "status"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "presale-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Atualizar status da pré-venda"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Presale",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/presales/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "presales",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "presale-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Deletar pré-venda"
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}
