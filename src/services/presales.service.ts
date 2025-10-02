@@ -4,11 +4,11 @@ import { preSales, preSaleItems } from '../db/schema/presales';
 import { customers } from '../db/schema/customers';
 import { products } from '../db/schema/products';
 import { BaseFilters, PreSaleStatus } from '../types/common.types';
-import { 
-  calculatePreSaleTotals, 
-  validateStockForPreSale, 
+import {
+  calculatePreSaleTotals,
+  validateStockForPreSale,
   PreSaleItemCalculation,
-  roundMoney 
+  roundMoney
 } from '../utils/presales-calculations';
 
 /**
@@ -263,7 +263,7 @@ export class PreSalesService {
         email: preSale.customerEmail,
         cpf: preSale.customerCpf,
       },
-      items: itemsResult.map(item => ({
+      items: itemsResult.map((item: typeof itemsResult[0]) => ({
         id: item.id,
         preSaleId: item.preSaleId,
         productId: item.productId,
@@ -406,7 +406,7 @@ export class PreSalesService {
 
     if (preSaleData.discount !== undefined) {
       updateData.discount = preSaleData.discount;
-      
+
       // Recalculate total if discount changed and no items update
       if (!preSaleData.items) {
         const currentItems = existingPreSale.items.map(item => ({
@@ -547,7 +547,7 @@ export class PreSalesService {
     }
 
     const whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
-    
+
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(preSales)

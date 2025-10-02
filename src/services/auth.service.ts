@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../db/connection.js';
+import { db } from '../db/connection';
 import { users } from '../db/schema/users.js';
 import { hashPassword, comparePassword } from '../utils/password-hash.js';
 import { generateToken, verifyToken } from '../utils/jwt.js';

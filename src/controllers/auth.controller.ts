@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { authService } from '../services/auth.service.js';
 import { LoginRequest, RegisterRequest } from '../schemas/auth.schemas.js';
+import '../types/fastify';
 
 /**
  * Authentication controller
@@ -26,7 +27,7 @@ export class AuthController {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      
+
       reply.status(401).send({
         error: {
           code: 'LOGIN_FAILED',
@@ -62,7 +63,7 @@ export class AuthController {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get profile';
-      
+
       reply.status(500).send({
         error: {
           code: 'PROFILE_FETCH_FAILED',
@@ -84,7 +85,7 @@ export class AuthController {
   ): Promise<void> {
     try {
       // Check if user is admin (this should be handled by middleware, but double-check)
-      if (!request.user || request.user.role !== 'admin') {
+      if (!request.user || (request.user as any).role !== 'admin') {
         return reply.status(403).send({
           error: {
             code: 'INSUFFICIENT_PERMISSIONS',
@@ -111,7 +112,7 @@ export class AuthController {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Registration failed';
-      
+
       // Handle specific error cases
       if (errorMessage.includes('already exists')) {
         return reply.status(409).send({
