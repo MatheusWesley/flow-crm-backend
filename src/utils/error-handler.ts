@@ -2,6 +2,7 @@ import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 import { AppError, ERROR_CODES, HTTP_STATUS_CODES } from '../types/error.types';
 import { ErrorResponse } from './response-helpers';
+import { isPostgresError, createDatabaseError } from './database-error-handler';
 
 /**
  * Global error handler for Fastify application
@@ -13,7 +14,7 @@ export const globalErrorHandler = (
 ) => {
   // Log error for debugging (exclude sensitive information in production)
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   if (!isProduction) {
     console.error('Error occurred:', {
       message: error.message,
@@ -216,26 +217,32 @@ const handleDatabaseError = (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  // Check for specific database constraint violations
+  // Use PostgreSQL-specific error mapping if it's a PostgreSQL error
+  if (isPostgresError(error)) {
+    const dbError = createDatabaseError(error);
+    return handleAppError(dbError, request, reply);
+  }
+
+  // Fallback for generic database errors
   let errorCode: string = ERROR_CODES.DATABASE_ERROR;
   let message = 'Database operation failed';
   let statusCode: number = HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR;
 
-  // Handle unique constraint violations
+  // Handle unique constraint violations (fallback)
   if (error.message.includes('unique constraint') || error.message.includes('duplicate key')) {
     errorCode = ERROR_CODES.DUPLICATE_RESOURCE;
     message = 'Resource already exists';
     statusCode = HTTP_STATUS_CODES.CONFLICT;
   }
 
-  // Handle foreign key constraint violations
+  // Handle foreign key constraint violations (fallback)
   if (error.message.includes('foreign key constraint')) {
     errorCode = ERROR_CODES.CONSTRAINT_VIOLATION;
     message = 'Referenced resource does not exist';
     statusCode = HTTP_STATUS_CODES.BAD_REQUEST;
   }
 
-  // Handle check constraint violations
+  // Handle check constraint violations (fallback)
   if (error.message.includes('check constraint')) {
     errorCode = ERROR_CODES.VALIDATION_ERROR;
     message = 'Data validation failed';
@@ -271,8 +278,8 @@ const handleUnknownError = (
     success: false,
     error: {
       code: ERROR_CODES.INTERNAL_ERROR,
-      message: process.env.NODE_ENV === 'production' 
-        ? 'Internal server error' 
+      message: process.env.NODE_ENV === 'production'
+        ? 'Internal server error'
         : error.message || 'An unexpected error occurred',
       // Only include stack trace in development
       details: process.env.NODE_ENV !== 'production' ? {
@@ -290,6 +297,12 @@ const handleUnknownError = (
  * Check if error is a database-related error
  */
 const isDatabaseError = (error: FastifyError): boolean => {
+  // First check if it's a PostgreSQL error
+  if (isPostgresError(error)) {
+    return true;
+  }
+
+  // Fallback to string matching for other database errors
   const databaseErrorIndicators = [
     'connection',
     'database',
@@ -302,10 +315,12 @@ const isDatabaseError = (error: FastifyError): boolean => {
     'check constraint',
     'not null',
     'unique constraint',
+    'timeout',
+    'pool',
   ];
 
   const errorMessage = error.message.toLowerCase();
-  return databaseErrorIndicators.some(indicator => 
+  return databaseErrorIndicators.some(indicator =>
     errorMessage.includes(indicator)
   );
 };

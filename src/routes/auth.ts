@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { authService } from '../services/auth.service';
 
 /**
  * Authentication routes
@@ -8,46 +9,16 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/login', async (request, reply) => {
     try {
       const { email, password } = request.body as any;
-      
-      // Mock authentication for now
-      if (email === 'admin@flowcrm.com' && password === 'admin123') {
-        const mockUser = {
-          id: '1',
-          email: 'admin@flowcrm.com',
-          name: 'Admin User',
-          role: 'admin',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
 
-        const mockToken = 'mock-jwt-token-' + Date.now();
+      const authResponse = await authService.login({ email, password });
 
-        return reply.status(200).send({
-          success: true,
-          data: {
-            user: mockUser,
-            token: mockToken,
-          },
-          message: 'Login realizado com sucesso',
-        });
-      }
-
-      return reply.status(401).send({
-        error: {
-          code: 'INVALID_CREDENTIALS',
-          message: 'Email ou senha inválidos',
-        },
-        timestamp: new Date().toISOString(),
-        path: request.url,
+      return reply.status(200).send({
+        user: authResponse.user,
+        token: authResponse.token,
       });
-    } catch (error) {
-      return reply.status(500).send({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Erro interno do servidor',
-        },
-        timestamp: new Date().toISOString(),
-        path: request.url,
+    } catch (error: any) {
+      return reply.status(401).send({
+        message: error.message || 'Invalid credentials',
       });
     }
   });
@@ -56,69 +27,42 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/register', async (request, reply) => {
     try {
       const { name, email, password, role } = request.body as any;
-      
-      // Mock user creation
-      const mockUser = {
-        id: Date.now().toString(),
-        name,
-        email,
-        role: role || 'employee',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+
+      const user = await authService.register({ name, email, password, role });
 
       return reply.status(201).send({
-        success: true,
-        data: mockUser,
-        message: 'Usuário criado com sucesso',
+        user,
       });
-    } catch (error) {
-      return reply.status(500).send({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Erro interno do servidor',
-        },
-        timestamp: new Date().toISOString(),
-        path: request.url,
+    } catch (error: any) {
+      return reply.status(400).send({
+        message: error.message || 'Registration failed',
       });
     }
   });
 
   // Get profile route
-  fastify.get('/me', async (request, reply) => {
-    try {
-      // Mock user profile
-      const mockUser = {
-        id: '1',
-        email: 'admin@flowcrm.com',
-        name: 'Admin User',
-        role: 'admin',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+  fastify.get('/profile', {
+    preHandler: async (request, reply) => {
+      try {
+        const token = request.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+          return reply.status(401).send({ message: 'No token provided' });
+        }
 
-      return reply.status(200).send({
-        success: true,
-        data: mockUser,
-        message: 'Perfil obtido com sucesso',
-      });
-    } catch (error) {
-      return reply.status(500).send({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Erro interno do servidor',
-        },
-        timestamp: new Date().toISOString(),
-        path: request.url,
-      });
+        const user = await authService.validateToken(token);
+        (request as any).user = user;
+      } catch (error) {
+        return reply.status(401).send({ message: 'Invalid token' });
+      }
     }
+  }, async (request, reply) => {
+    return reply.status(200).send((request as any).user);
   });
 
   // Logout route
   fastify.post('/logout', async (request, reply) => {
     return reply.status(200).send({
-      success: true,
-      message: 'Logout realizado com sucesso',
+      message: 'Logout successful',
     });
   });
 

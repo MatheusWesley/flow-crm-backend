@@ -145,7 +145,7 @@ export class CustomerService {
   async create(customerData: CreateCustomerData): Promise<Customer> {
     // Validate and clean CPF
     const cleanedCpf = cleanCpf(customerData.cpf);
-    
+
     if (!validateCpf(cleanedCpf)) {
       throw new Error('Invalid CPF format');
     }
@@ -154,7 +154,7 @@ export class CustomerService {
     await this.validateCpfUniqueness(cleanedCpf);
 
     // Check for email uniqueness
-    await this.validateEmailUniqueness(customerData.email);
+    await this.validateEmailUniqueness(customerData.email.toLowerCase().trim());
 
     // Sanitize and prepare data
     const sanitizedData = {
@@ -207,7 +207,7 @@ export class CustomerService {
 
     if (customerData.cpf !== undefined) {
       const cleanedCpf = cleanCpf(customerData.cpf);
-      
+
       if (!validateCpf(cleanedCpf)) {
         throw new Error('Invalid CPF format');
       }
@@ -216,7 +216,7 @@ export class CustomerService {
       if (cleanedCpf !== existingCustomer.cpf) {
         await this.validateCpfUniqueness(cleanedCpf);
       }
-      
+
       updateData.cpf = cleanedCpf;
     }
 
@@ -307,7 +307,7 @@ export class CustomerService {
     }
 
     const whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
-    
+
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(customers)
