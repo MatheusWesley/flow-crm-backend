@@ -24,7 +24,7 @@ export interface Product {
  * Product creation data interface
  */
 export interface CreateProductData {
-  code: string;
+  code?: string;
   name: string;
   unit: string;
   description?: string | null;
@@ -178,15 +178,24 @@ export class ProductService {
    * Create a new product
    */
   async create(productData: CreateProductData): Promise<Product> {
-    // Validate product code uniqueness
-    await this.validateCodeUniqueness(productData.code);
-
-    // Validate price values
+    // Validate price values first
     this.validatePrices(productData.purchasePrice, productData.salePrice);
+
+    // Determine the product code - generate automatically if not provided
+    let productCode: string;
+
+    if (productData.code && productData.code.trim()) {
+      // Manual code provided - validate uniqueness and format
+      productCode = productData.code.trim().toUpperCase();
+      await this.validateCodeUniqueness(productCode);
+    } else {
+      // Generate code automatically - simple implementation for task 7
+      productCode = await this.generateNextCode();
+    }
 
     // Sanitize and prepare data
     const sanitizedData = {
-      code: productData.code.trim().toUpperCase(),
+      code: productCode,
       name: productData.name.trim(),
       unit: productData.unit.trim(),
       description: productData.description?.trim() || null,
@@ -308,7 +317,7 @@ export class ProductService {
 
     const result = await db
       .update(products)
-      .set({ 
+      .set({
         stock: quantity,
         updatedAt: new Date()
       })
@@ -337,7 +346,7 @@ export class ProductService {
 
     const result = await db
       .update(products)
-      .set({ 
+      .set({
         stock: newStock,
         updatedAt: new Date()
       })
@@ -387,13 +396,37 @@ export class ProductService {
     }
 
     const whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
-    
+
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(products)
       .where(whereCondition);
 
     return result[0].count;
+  }
+
+  /**
+   * Generate next automatic product code
+   */
+  private async generateNextCode(): Promise<string> {
+    // Get the highest existing code number
+    const result = await db
+      .select({ code: products.code })
+      .from(products)
+      .where(sql`${products.code} ~ '^PROD[0-9]{7}$'`)
+      .orderBy(desc(products.code))
+      .limit(1);
+
+    let nextNumber = 1;
+    if (result.length > 0) {
+      const lastCode = result[0].code;
+      const lastNumber = parseInt(lastCode.substring(4), 10);
+      nextNumber = lastNumber + 1;
+    }
+
+    // Format with zero padding
+    const paddedNumber = nextNumber.toString().padStart(7, '0');
+    return `PROD${paddedNumber}`;
   }
 
   /**

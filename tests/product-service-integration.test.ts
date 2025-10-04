@@ -235,25 +235,33 @@ describe('Product Service Database Integration', () => {
             ).rejects.toThrow('Product code already exists');
         });
 
-        it('should enforce product code uniqueness on update', async () => {
-            const product1 = await productService.create(testProduct1);
-            const product2 = await productService.create(testProduct2);
+        it('should reject any attempts to modify product code after creation', async () => {
+            const product = await productService.create(testProduct1);
 
             await expect(
-                productService.update(product2.id, { code: testProduct1.code })
-            ).rejects.toThrow('Product code already exists');
+                productService.update(product.id, { code: 'NEWCODE001' })
+            ).rejects.toThrow('Product code cannot be modified after creation');
         });
 
-        it('should allow updating product with same code', async () => {
+        it('should reject code modification even with same code', async () => {
+            const product = await productService.create(testProduct1);
+
+            await expect(
+                productService.update(product.id, { code: testProduct1.code })
+            ).rejects.toThrow('Product code cannot be modified after creation');
+        });
+
+        it('should allow updating other fields while ignoring code field', async () => {
             const product = await productService.create(testProduct1);
 
             const updatedProduct = await productService.update(product.id, {
-                code: testProduct1.code,
-                name: 'Updated Name'
+                name: 'Updated Name',
+                stock: 20
             });
 
             expect(updatedProduct.name).toBe('Updated Name');
-            expect(updatedProduct.code).toBe(testProduct1.code.toUpperCase());
+            expect(updatedProduct.stock).toBe(20);
+            expect(updatedProduct.code).toBe(testProduct1.code.toUpperCase()); // Should remain unchanged
         });
 
         it('should convert product code to uppercase', async () => {
@@ -375,6 +383,115 @@ describe('Product Service Database Integration', () => {
                     salePrice: '2000.00'
                 })
             ).rejects.toThrow('Sale price should not be lower than purchase price');
+        });
+    });
+
+    describe('Automatic Code Generation', () => {
+        it('should generate automatic code when code is not provided', async () => {
+            const productWithoutCode = {
+                name: 'Test Product Auto Code',
+                unit: 'UN',
+                description: 'Test product for automatic code generation',
+                stock: 5,
+                purchasePrice: '100.00',
+                salePrice: '150.00',
+                saleType: 'retail'
+            };
+
+            const product = await productService.create(productWithoutCode);
+
+            expect(product).toBeDefined();
+            expect(product.code).toBeDefined();
+            expect(product.code).toMatch(/^PROD\d{7}$/); // Should match PROD + 7 digits
+            expect(product.name).toBe(productWithoutCode.name);
+        });
+
+        it('should generate sequential codes for multiple products', async () => {
+            const product1Data = {
+                name: 'Test Product 1',
+                unit: 'UN',
+                purchasePrice: '100.00',
+                salePrice: '150.00',
+                saleType: 'retail'
+            };
+
+            const product2Data = {
+                name: 'Test Product 2',
+                unit: 'UN',
+                purchasePrice: '200.00',
+                salePrice: '250.00',
+                saleType: 'retail'
+            };
+
+            const product1 = await productService.create(product1Data);
+            const product2 = await productService.create(product2Data);
+
+            expect(product1.code).toMatch(/^PROD\d{7}$/);
+            expect(product2.code).toMatch(/^PROD\d{7}$/);
+            expect(product1.code).not.toBe(product2.code);
+
+            // Extract sequence numbers and verify they are sequential
+            const seq1 = parseInt(product1.code.substring(4));
+            const seq2 = parseInt(product2.code.substring(4));
+            expect(seq2).toBe(seq1 + 1);
+        });
+
+        it('should still accept manual code when provided', async () => {
+            const productWithManualCode = {
+                code: 'MANUAL001',
+                name: 'Test Product Manual Code',
+                unit: 'UN',
+                purchasePrice: '100.00',
+                salePrice: '150.00',
+                saleType: 'retail'
+            };
+
+            const product = await productService.create(productWithManualCode);
+
+            expect(product.code).toBe('MANUAL001');
+            expect(product.name).toBe(productWithManualCode.name);
+        });
+
+        it('should ignore empty or whitespace-only code and generate automatic code', async () => {
+            const productWithEmptyCode = {
+                code: '   ',
+                name: 'Test Product Empty Code',
+                unit: 'UN',
+                purchasePrice: '100.00',
+                salePrice: '150.00',
+                saleType: 'retail'
+            };
+
+            const product = await productService.create(productWithEmptyCode);
+
+            expect(product.code).toMatch(/^PROD\d{7}$/);
+            expect(product.name).toBe(productWithEmptyCode.name);
+        });
+
+        it('should validate uniqueness for manual codes', async () => {
+            const product1 = {
+                code: 'DUPLICATE001',
+                name: 'Test Product 1',
+                unit: 'UN',
+                purchasePrice: '100.00',
+                salePrice: '150.00',
+                saleType: 'retail'
+            };
+
+            const product2 = {
+                code: 'DUPLICATE001',
+                name: 'Test Product 2',
+                unit: 'UN',
+                purchasePrice: '200.00',
+                salePrice: '250.00',
+                saleType: 'retail'
+            };
+
+            await productService.create(product1);
+
+            await expect(
+                productService.create(product2)
+            ).rejects.toThrow('Product code already exists');
         });
     });
 

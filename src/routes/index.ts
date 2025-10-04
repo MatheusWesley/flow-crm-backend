@@ -11,16 +11,16 @@ export const registerRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Register auth routes
-  await fastify.register(authRoutes, { prefix: '/auth' });
+  await fastify.register(authRoutes, { prefix: '/api/auth' });
 
   // Register customer routes
-  await fastify.register(customerRoutes, { prefix: '/customers' });
+  await fastify.register(customerRoutes, { prefix: '/api/customers' });
 
   // Register product routes
-  await fastify.register(productRoutes, { prefix: '/products' });
+  await fastify.register(productRoutes, { prefix: '/api/products' });
 
   // Register presales routes
-  await fastify.register(preSalesRoutes, { prefix: '/presales' });
+  await fastify.register(preSalesRoutes, { prefix: '/api/presales' });
 
   fastify.log.info('All routes registered successfully');
 };

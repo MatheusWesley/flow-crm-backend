@@ -107,11 +107,12 @@
                             "raw": "{\n  \"email\": \"admin@flowcrm.com\",\n  \"password\": \"admin123\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/auth/login",
+                            "raw": "{{baseUrl}}/api/auth/login",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
+                                "api",
                                 "auth",
                                 "login"
                             ]
@@ -135,11 +136,12 @@
                             "raw": "{\n  \"name\": \"Nome do Usuário\",\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"employee\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/auth/register",
+                            "raw": "{{baseUrl}}/api/auth/register",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
+                                "api",
                                 "auth",
                                 "register"
                             ]
@@ -154,13 +156,14 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/auth/me",
+                            "raw": "{{baseUrl}}/api/auth/profile",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
+                                "api",
                                 "auth",
-                                "me"
+                                "profile"
                             ]
                         },
                         "description": "Obter perfil do usuário atual"
@@ -173,11 +176,12 @@
                         "method": "POST",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/auth/logout",
+                            "raw": "{{baseUrl}}/api/auth/logout",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
+                                "api",
                                 "auth",
                                 "logout"
                             ]
@@ -197,12 +201,13 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/customers?page=1&limit=10&sortBy=name&sortOrder=asc",
+                            "raw": "{{baseUrl}}/api/customers?page=1&limit=10&sortBy=name&sortOrder=asc",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "customers"
+                                "api",
+                                "api", "customers"
                             ],
                             "query": [
                                 {
@@ -261,12 +266,12 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/customers/:id",
+                            "raw": "{{baseUrl}}/api/customers/:id",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "customers",
+                                "api", "customers",
                                 ":id"
                             ],
                             "variable": [
@@ -295,12 +300,12 @@
                             "raw": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao@example.com\",\n  \"phone\": \"(11) 99999-9999\",\n  \"cpf\": \"123.456.789-00\",\n  \"address\": \"Rua das Flores, 123\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/customers",
+                            "raw": "{{baseUrl}}/api/customers",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "customers"
+                                "api", "customers"
                             ]
                         },
                         "description": "Criar novo cliente"
@@ -322,12 +327,12 @@
                             "raw": "{\n  \"name\": \"João Silva Atualizado\",\n  \"email\": \"joao.novo@example.com\",\n  \"phone\": \"(11) 88888-8888\",\n  \"address\": \"Novo endereço\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/customers/:id",
+                            "raw": "{{baseUrl}}/api/customers/:id",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "customers",
+                                "api", "customers",
                                 ":id"
                             ],
                             "variable": [
@@ -347,12 +352,12 @@
                         "method": "DELETE",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/customers/:id",
+                            "raw": "{{baseUrl}}/api/customers/:id",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "customers",
+                                "api", "customers",
                                 ":id"
                             ],
                             "variable": [
@@ -377,12 +382,12 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/products?page=1&limit=10&sortBy=name&sortOrder=asc",
+                            "raw": "{{baseUrl}}/api/products?page=1&limit=10&sortBy=name&sortOrder=asc",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "products"
+                                "api", "products"
                             ],
                             "query": [
                                 {
@@ -453,12 +458,12 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/products/:id",
+                            "raw": "{{baseUrl}}/api/products/:id",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "products",
+                                "api", "products",
                                 ":id"
                             ],
                             "variable": [
@@ -487,12 +492,12 @@
                             "raw": "{\n  \"code\": \"PROD001\",\n  \"name\": \"Produto Exemplo\",\n  \"unit\": \"UN\",\n  \"description\": \"Descrição do produto\",\n  \"stock\": 100,\n  \"purchasePrice\": \"10.50\",\n  \"salePrice\": \"15.75\",\n  \"saleType\": \"unit\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/products",
+                            "raw": "{{baseUrl}}/api/products",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "products"
+                                "api", "products"
                             ]
                         },
                         "description": "Criar novo produto"
@@ -514,12 +519,12 @@
                             "raw": "{\n  \"name\": \"Produto Atualizado\",\n  \"stock\": 150,\n  \"salePrice\": \"18.00\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/products/:id",
+                            "raw": "{{baseUrl}}/api/products/:id",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "products",
+                                "api", "products",
                                 ":id"
                             ],
                             "variable": [
@@ -539,12 +544,12 @@
                         "method": "DELETE",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/products/:id",
+                            "raw": "{{baseUrl}}/api/products/:id",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "products",
+                                "api", "products",
                                 ":id"
                             ],
                             "variable": [
@@ -569,12 +574,12 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/presales?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+                            "raw": "{{baseUrl}}/api/presales?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "presales"
+                                "api", "presales"
                             ],
                             "query": [
                                 {
@@ -645,12 +650,12 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/presales/:id",
+                            "raw": "{{baseUrl}}/api/presales/:id",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "presales",
+                                "api", "presales",
                                 ":id"
                             ],
                             "variable": [
@@ -679,12 +684,12 @@
                             "raw": "{\n  \"customerId\": \"customer-uuid-here\",\n  \"discount\": \"10.00\",\n  \"notes\": \"Pré-venda de exemplo\",\n  \"items\": [\n    {\n      \"productId\": \"product-uuid-here\",\n      \"quantity\": 2,\n      \"unitPrice\": \"15.75\"\n    }\n  ]\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/presales",
+                            "raw": "{{baseUrl}}/api/presales",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "presales"
+                                "api", "presales"
                             ]
                         },
                         "description": "Criar nova pré-venda"
@@ -706,12 +711,12 @@
                             "raw": "{\n  \"discount\": \"15.00\",\n  \"notes\": \"Pré-venda atualizada\",\n  \"items\": [\n    {\n      \"productId\": \"product-uuid-here\",\n      \"quantity\": 3,\n      \"unitPrice\": \"15.75\"\n    }\n  ]\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/presales/:id",
+                            "raw": "{{baseUrl}}/api/presales/:id",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "presales",
+                                "api", "presales",
                                 ":id"
                             ],
                             "variable": [
@@ -740,12 +745,12 @@
                             "raw": "{\n  \"status\": \"approved\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/presales/:id/status",
+                            "raw": "{{baseUrl}}/api/presales/:id/status",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "presales",
+                                "api", "presales",
                                 ":id",
                                 "status"
                             ],
@@ -766,12 +771,12 @@
                         "method": "DELETE",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/presales/:id",
+                            "raw": "{{baseUrl}}/api/presales/:id",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
-                                "presales",
+                                "api", "presales",
                                 ":id"
                             ],
                             "variable": [

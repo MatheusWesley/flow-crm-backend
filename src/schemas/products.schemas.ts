@@ -12,8 +12,14 @@ const priceValidation = (price: string) => {
 
 // Product code validation function
 const productCodeValidation = (code: string) => {
-  // Product code should be alphanumeric and may contain hyphens or underscores
-  return /^[A-Z0-9_-]+$/i.test(code);
+  // Support both automatic PROD format (PROD + 7 digits) and legacy alphanumeric codes
+  // When code is manually provided, it must follow one of these formats:
+  // 1. PROD format: PROD followed by exactly 7 digits (e.g., PROD0000001)
+  // 2. Legacy format: alphanumeric with hyphens/underscores (for backward compatibility)
+  const prodFormatRegex = /^PROD\d{7}$/;
+  const legacyFormatRegex = /^[A-Z0-9_-]+$/i;
+
+  return prodFormatRegex.test(code) || legacyFormatRegex.test(code);
 };
 
 // Base product schema with common fields
@@ -24,21 +30,21 @@ const baseProductSchema = {
     .max(50, 'Product code must be less than 50 characters')
     .trim()
     .transform(code => code.toUpperCase())
-    .refine(productCodeValidation, 'Product code must contain only letters, numbers, hyphens, and underscores'),
-  
+    .refine(productCodeValidation, 'Product code must be in PROD format (PROD + 7 digits) or contain only letters, numbers, hyphens, and underscores'),
+
   name: z
     .string()
     .min(1, 'Product name is required')
     .max(255, 'Product name must be less than 255 characters')
     .trim()
     .transform(name => name.replace(/\s+/g, ' ')), // Normalize whitespace
-  
+
   unit: z
     .string()
     .min(1, 'Unit is required')
     .max(20, 'Unit must be less than 20 characters')
     .trim(),
-  
+
   description: z
     .string()
     .max(1000, 'Description must be less than 1000 characters')
@@ -46,26 +52,26 @@ const baseProductSchema = {
     .optional()
     .nullable()
     .transform(desc => desc === '' ? null : desc),
-  
+
   stock: z
     .number()
     .int('Stock must be an integer')
     .min(0, 'Stock cannot be negative')
     .optional()
     .default(0),
-  
+
   purchasePrice: z
     .string()
     .min(1, 'Purchase price is required')
     .regex(/^\d+(\.\d{1,2})?$/, 'Purchase price must be a valid decimal number with up to 2 decimal places')
     .refine(priceValidation, 'Purchase price must be a valid positive number'),
-  
+
   salePrice: z
     .string()
     .min(1, 'Sale price is required')
     .regex(/^\d+(\.\d{1,2})?$/, 'Sale price must be a valid decimal number with up to 2 decimal places')
     .refine(priceValidation, 'Sale price must be a valid positive number'),
-  
+
   saleType: z
     .string()
     .min(1, 'Sale type is required')
@@ -75,24 +81,29 @@ const baseProductSchema = {
 
 // Create product schema
 export const createProductSchema = z.object({
-  ...baseProductSchema,
-  // All fields are required for creation except description and stock
+  code: baseProductSchema.code.optional(), // Code is optional - will be auto-generated if not provided
+  name: baseProductSchema.name,
+  unit: baseProductSchema.unit,
+  description: baseProductSchema.description,
+  stock: baseProductSchema.stock,
+  purchasePrice: baseProductSchema.purchasePrice,
+  salePrice: baseProductSchema.salePrice,
+  saleType: baseProductSchema.saleType
 }).strict() // Prevent additional properties
-.refine(
-  (data) => {
-    const purchasePrice = parseFloat(data.purchasePrice);
-    const salePrice = parseFloat(data.salePrice);
-    return salePrice >= purchasePrice;
-  },
-  {
-    message: 'Sale price should not be lower than purchase price',
-    path: ['salePrice']
-  }
-);
+  .refine(
+    (data) => {
+      const purchasePrice = parseFloat(data.purchasePrice);
+      const salePrice = parseFloat(data.salePrice);
+      return salePrice >= purchasePrice;
+    },
+    {
+      message: 'Sale price should not be lower than purchase price',
+      path: ['salePrice']
+    }
+  );
 
-// Update product schema
+// Update product schema - code field is excluded to prevent modifications after creation
 export const updateProductSchema = z.object({
-  code: baseProductSchema.code.optional(),
   name: baseProductSchema.name.optional(),
   unit: baseProductSchema.unit.optional(),
   description: baseProductSchema.description,
@@ -101,25 +112,25 @@ export const updateProductSchema = z.object({
   salePrice: baseProductSchema.salePrice.optional(),
   saleType: baseProductSchema.saleType.optional()
 }).strict() // Prevent additional properties
-.refine(
-  (data) => Object.keys(data).length > 0,
-  'At least one field must be provided for update'
-)
-.refine(
-  (data) => {
-    // Only validate price relationship if both prices are provided
-    if (data.purchasePrice && data.salePrice) {
-      const purchasePrice = parseFloat(data.purchasePrice);
-      const salePrice = parseFloat(data.salePrice);
-      return salePrice >= purchasePrice;
+  .refine(
+    (data) => Object.keys(data).length > 0,
+    'At least one field must be provided for update'
+  )
+  .refine(
+    (data) => {
+      // Only validate price relationship if both prices are provided
+      if (data.purchasePrice && data.salePrice) {
+        const purchasePrice = parseFloat(data.purchasePrice);
+        const salePrice = parseFloat(data.salePrice);
+        return salePrice >= purchasePrice;
+      }
+      return true;
+    },
+    {
+      message: 'Sale price should not be lower than purchase price',
+      path: ['salePrice']
     }
-    return true;
-  },
-  {
-    message: 'Sale price should not be lower than purchase price',
-    path: ['salePrice']
-  }
-);
+  );
 
 // Product response schema
 export const productResponseSchema = z.object({
@@ -143,61 +154,61 @@ export const productFiltersSchema = z.object({
     .optional()
     .transform(val => val ? parseInt(val, 10) : 1)
     .refine(val => val >= 1, 'Page must be greater than 0'),
-  
+
   limit: z
     .string()
     .optional()
     .transform(val => val ? parseInt(val, 10) : 50)
     .refine(val => val >= 1 && val <= 100, 'Limit must be between 1 and 100'),
-  
+
   sortBy: z
     .enum(['code', 'name', 'stock', 'salePrice', 'createdAt'], {
       message: 'Sort field must be code, name, stock, salePrice, or createdAt'
     })
     .optional()
     .default('name'),
-  
+
   sortOrder: z
     .enum(['asc', 'desc'], {
       message: 'Sort order must be asc or desc'
     })
     .optional()
     .default('asc'),
-  
+
   code: z
     .string()
     .min(1, 'Code filter cannot be empty')
     .max(50, 'Code filter must be less than 50 characters')
     .trim()
     .optional(),
-  
+
   name: z
     .string()
     .min(1, 'Name filter cannot be empty')
     .max(255, 'Name filter must be less than 255 characters')
     .trim()
     .optional(),
-  
+
   saleType: z
     .string()
     .min(1, 'Sale type filter cannot be empty')
     .max(50, 'Sale type filter must be less than 50 characters')
     .trim()
     .optional(),
-  
+
   search: z
     .string()
     .min(1, 'Search term cannot be empty')
     .max(255, 'Search term must be less than 255 characters')
     .trim()
     .optional(),
-  
+
   minStock: z
     .string()
     .optional()
     .transform(val => val ? parseInt(val, 10) : undefined)
     .refine(val => val === undefined || val >= 0, 'Minimum stock must be 0 or greater'),
-  
+
   maxStock: z
     .string()
     .optional()
@@ -297,6 +308,11 @@ export type ValidationErrorDetails = z.infer<typeof validationErrorDetailsSchema
 // Custom validation functions
 export const validateProductCode = (code: string): boolean => {
   return productCodeValidation(code);
+};
+
+export const validateProdFormat = (code: string): boolean => {
+  // Validate strict PROD format (PROD + exactly 7 digits)
+  return /^PROD\d{7}$/.test(code);
 };
 
 export const validateProductPrice = (price: string): boolean => {

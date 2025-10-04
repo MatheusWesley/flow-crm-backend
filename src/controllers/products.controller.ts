@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { productService, ProductFilters } from '../services/products.service';
+import { ValidationError } from '../types/error.types';
 import {
   sendSuccess,
   sendCreated,
@@ -32,7 +33,7 @@ export class ProductController {
     try {
       // Validate query parameters
       const filtersValidation = validateProductFilters(request.query);
-      
+
       if (!filtersValidation.success) {
         const errorMessage = getValidationErrorMessage(filtersValidation.error);
         const errorDetails = getValidationErrorDetails(filtersValidation.error);
@@ -67,7 +68,7 @@ export class ProductController {
     try {
       // Validate product ID parameter
       const paramsValidation = validateProductId(request.params);
-      
+
       if (!paramsValidation.success) {
         const errorMessage = getValidationErrorMessage(paramsValidation.error);
         const errorDetails = getValidationErrorDetails(paramsValidation.error);
@@ -98,7 +99,7 @@ export class ProductController {
     try {
       // Validate request body
       const bodyValidation = validateCreateProduct(request.body);
-      
+
       if (!bodyValidation.success) {
         const errorMessage = getValidationErrorMessage(bodyValidation.error);
         const errorDetails = getValidationErrorDetails(bodyValidation.error);
@@ -143,7 +144,7 @@ export class ProductController {
     try {
       // Validate product ID parameter
       const paramsValidation = validateProductId(request.params);
-      
+
       if (!paramsValidation.success) {
         const errorMessage = getValidationErrorMessage(paramsValidation.error);
         const errorDetails = getValidationErrorDetails(paramsValidation.error);
@@ -152,7 +153,7 @@ export class ProductController {
 
       // Validate request body
       const bodyValidation = validateUpdateProduct(request.body);
-      
+
       if (!bodyValidation.success) {
         const errorMessage = getValidationErrorMessage(bodyValidation.error);
         const errorDetails = getValidationErrorDetails(bodyValidation.error);
@@ -167,6 +168,12 @@ export class ProductController {
       return sendSuccess(reply, product, 'Product updated successfully');
     } catch (error) {
       console.error('Error updating product:', error);
+
+      // Handle ValidationError instances
+      if (error instanceof ValidationError) {
+        return sendValidationError(reply, error.message, error.details);
+      }
+
       const errorMessage = error instanceof Error ? error.message : 'Failed to update product';
 
       // Handle specific error cases
@@ -202,7 +209,7 @@ export class ProductController {
     try {
       // Validate product ID parameter
       const paramsValidation = validateProductId(request.params);
-      
+
       if (!paramsValidation.success) {
         const errorMessage = getValidationErrorMessage(paramsValidation.error);
         const errorDetails = getValidationErrorDetails(paramsValidation.error);
