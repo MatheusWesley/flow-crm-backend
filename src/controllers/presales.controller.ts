@@ -96,10 +96,18 @@ export class PreSalesController {
   /**
    * Create a new pre-sale with items
    * POST /api/presales
+   * 
+   * Supports discount types:
+   * - fixed: discount as monetary value (R$)
+   * - percentage: discount as percentage (0-100%)
+   * 
+   * The system automatically converts between types:
+   * - If percentage is provided, fixed value is calculated
+   * - If fixed value is provided, percentage is calculated
    */
   async createPreSale(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      // Validate request body
+      // Validate request body (includes discountType and discountPercentage)
       const bodyValidation = validateCreatePreSale(request.body);
       
       if (!bodyValidation.success) {
@@ -116,6 +124,7 @@ export class PreSalesController {
         return sendBadRequest(reply, businessRuleErrors.join('; '));
       }
 
+      // Service handles automatic discount conversion
       const preSale = await preSalesService.create(preSaleData);
 
       return sendCreated(reply, preSale, 'Pre-sale created successfully');
@@ -143,6 +152,11 @@ export class PreSalesController {
   /**
    * Update an existing pre-sale
    * PUT /api/presales/:id
+   * 
+   * Supports updating discount type and values:
+   * - Can change between fixed and percentage discount types
+   * - Automatic conversion maintains discount equivalence
+   * - Both discount fields are recalculated and saved
    */
   async updatePreSale(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
@@ -155,7 +169,7 @@ export class PreSalesController {
         return sendValidationError(reply, errorMessage, errorDetails);
       }
 
-      // Validate request body
+      // Validate request body (includes discountType and discountPercentage)
       const bodyValidation = validateUpdatePreSale(request.body);
       
       if (!bodyValidation.success) {
@@ -173,6 +187,7 @@ export class PreSalesController {
         return sendBadRequest(reply, businessRuleErrors.join('; '));
       }
 
+      // Service handles automatic discount conversion
       const preSale = await preSalesService.update(id, preSaleData);
 
       return sendSuccess(reply, preSale, 'Pre-sale updated successfully');

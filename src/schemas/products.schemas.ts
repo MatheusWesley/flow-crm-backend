@@ -177,42 +177,82 @@ export const productFiltersSchema = z.object({
 
   code: z
     .string()
-    .min(1, 'Code filter cannot be empty')
-    .max(50, 'Code filter must be less than 50 characters')
     .trim()
-    .optional(),
+    .optional()
+    .transform(val => {
+      // Treat empty strings, 'string', 'undefined', 'null' as undefined
+      if (!val || val === '' || val === 'string' || val === 'undefined' || val === 'null') {
+        return undefined;
+      }
+      return val;
+    })
+    .refine(val => !val || val.length <= 50, 'Code filter must be less than 50 characters'),
 
   name: z
     .string()
-    .min(1, 'Name filter cannot be empty')
-    .max(255, 'Name filter must be less than 255 characters')
     .trim()
-    .optional(),
+    .optional()
+    .transform(val => {
+      // Treat empty strings, 'string', 'undefined', 'null' as undefined
+      if (!val || val === '' || val === 'string' || val === 'undefined' || val === 'null') {
+        return undefined;
+      }
+      return val;
+    })
+    .refine(val => !val || val.length <= 255, 'Name filter must be less than 255 characters'),
 
   saleType: z
     .string()
-    .min(1, 'Sale type filter cannot be empty')
-    .max(50, 'Sale type filter must be less than 50 characters')
     .trim()
-    .optional(),
+    .optional()
+    .transform(val => {
+      // Treat empty strings, 'string', 'undefined', 'null' as undefined
+      if (!val || val === '' || val === 'string' || val === 'undefined' || val === 'null') {
+        return undefined;
+      }
+      return val;
+    })
+    .refine(val => !val || val.length <= 50, 'Sale type filter must be less than 50 characters'),
 
   search: z
     .string()
-    .min(1, 'Search term cannot be empty')
-    .max(255, 'Search term must be less than 255 characters')
     .trim()
-    .optional(),
+    .optional()
+    .transform(val => {
+      // Treat empty strings, 'string', 'undefined', 'null' as undefined
+      if (!val || val === '' || val === 'string' || val === 'undefined' || val === 'null') {
+        return undefined;
+      }
+      return val;
+    })
+    .refine(val => !val || val.length <= 255, 'Search term must be less than 255 characters'),
 
   minStock: z
     .string()
+    .trim()
     .optional()
-    .transform(val => val ? parseInt(val, 10) : undefined)
+    .transform(val => {
+      // Treat empty strings, 'string', 'undefined', 'null' as undefined
+      if (!val || val === '' || val === 'string' || val === 'undefined' || val === 'null') {
+        return undefined;
+      }
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? undefined : parsed;
+    })
     .refine(val => val === undefined || val >= 0, 'Minimum stock must be 0 or greater'),
 
   maxStock: z
     .string()
+    .trim()
     .optional()
-    .transform(val => val ? parseInt(val, 10) : undefined)
+    .transform(val => {
+      // Treat empty strings, 'string', 'undefined', 'null' as undefined
+      if (!val || val === '' || val === 'string' || val === 'undefined' || val === 'null') {
+        return undefined;
+      }
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? undefined : parsed;
+    })
     .refine(val => val === undefined || val >= 0, 'Maximum stock must be 0 or greater')
 }).refine(
   (data) => {

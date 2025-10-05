@@ -16,17 +16,17 @@ const start = async (): Promise<void> => {
     // Perform database health check before starting server
     app.log.info('Checking database connection...');
     const isDatabaseConnected = await checkDatabaseConnection();
-    
+
     if (!isDatabaseConnected) {
       throw new Error('Database connection failed - cannot start server');
     }
-    
+
     app.log.info('Database connection verified successfully');
 
     // Start the server
     const address = await app.listen({
       port: env.PORT,
-      host: env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost',
+      host: '0.0.0.0', // Allow access from network
     });
 
     app.log.info(`🚀 Server running at ${address}`);
@@ -48,7 +48,7 @@ const start = async (): Promise<void> => {
  */
 const gracefulShutdown = async (signal: string): Promise<void> => {
   console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
-  
+
   try {
     // Give the server some time to finish processing current requests
     const shutdownTimeout = setTimeout(() => {
@@ -59,7 +59,7 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
     // Close the server gracefully
     const app = buildApp();
     await app.close();
-    
+
     clearTimeout(shutdownTimeout);
     console.log('✅ Server closed gracefully');
     process.exit(0);

@@ -1,796 +1,2140 @@
 {
+    "openapi": "3.0.3",
     "info": {
-        "name": "Flow CRM API",
-        "description": "REST API para sistema de CRM com gestão de clientes, produtos e pré-vendas",
+        "title": "Flow CRM Backend API",
+        "description": "REST API para o sistema Flow CRM - Gerenciamento de clientes, produtos e pré-vendas",
         "version": "1.0.0",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+        "contact": {
+            "name": "Flow CRM Team",
+            "email": "dev@flowcrm.com"
+        }
     },
-    "variable": [
+    "servers": [
         {
-            "key": "baseUrl",
-            "value": "http://localhost:3000",
-            "type": "string"
-        },
-        {
-            "key": "token",
-            "value": "",
-            "type": "string"
+            "url": "http://localhost:3000",
+            "description": "Servidor de desenvolvimento"
         }
     ],
-    "auth": {
-        "type": "bearer",
-        "bearer": [
-            {
-                "key": "token",
-                "value": "{{token}}",
-                "type": "string"
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
             }
-        ]
-    },
-    "item": [
-        {
-            "name": "Health & Test",
-            "item": [
-                {
-                    "name": "Health Check",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/health",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "health"
-                            ]
-                        },
-                        "description": "Verificação de saúde da API"
+        },
+        "schemas": {
+            "User": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID único do usuário"
                     },
-                    "response": []
-                },
-                {
-                    "name": "API Test",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/test",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "test"
-                            ]
-                        },
-                        "description": "Endpoint de teste da API"
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "description": "Email do usuário"
                     },
-                    "response": []
+                    "name": {
+                        "type": "string",
+                        "description": "Nome completo do usuário"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "admin",
+                            "manager",
+                            "employee"
+                        ],
+                        "description": "Papel do usuário no sistema"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Data de criação"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Data da última atualização"
+                    }
                 }
-            ]
+            },
+            "Customer": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID único do cliente"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Nome completo do cliente"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "description": "Email do cliente"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "description": "Telefone do cliente"
+                    },
+                    "cpf": {
+                        "type": "string",
+                        "description": "CPF do cliente (apenas números)"
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Endereço completo do cliente"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Data de criação"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Data da última atualização"
+                    }
+                }
+            },
+            "Product": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID único do produto"
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "Código único do produto"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Nome do produto"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "description": "Unidade de medida (UN, KG, M, etc.)"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Descrição detalhada do produto"
+                    },
+                    "stock": {
+                        "type": "integer",
+                        "description": "Quantidade em estoque"
+                    },
+                    "purchasePrice": {
+                        "type": "string",
+                        "description": "Preço de compra (decimal como string)"
+                    },
+                    "salePrice": {
+                        "type": "string",
+                        "description": "Preço de venda (decimal como string)"
+                    },
+                    "saleType": {
+                        "type": "string",
+                        "description": "Tipo de venda (retail, wholesale, etc.)"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Data de criação"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Data da última atualização"
+                    }
+                }
+            },
+            "PreSale": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID único da pré-venda"
+                    },
+                    "customerId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do cliente"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "pending",
+                            "approved",
+                            "cancelled",
+                            "converted"
+                        ],
+                        "description": "Status da pré-venda"
+                    },
+                    "total": {
+                        "type": "string",
+                        "description": "Valor total (decimal como string)"
+                    },
+                    "discount": {
+                        "type": "string",
+                        "description": "Valor do desconto (decimal como string)"
+                    },
+                    "discountType": {
+                        "type": "string",
+                        "enum": [
+                            "fixed",
+                            "percentage"
+                        ],
+                        "description": "Tipo de desconto"
+                    },
+                    "discountPercentage": {
+                        "type": "string",
+                        "description": "Percentual de desconto (decimal como string)"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Observações da pré-venda"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Data de criação"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Data da última atualização"
+                    },
+                    "customer": {
+                        "$ref": "#/components/schemas/Customer"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PreSaleItem"
+                        }
+                    }
+                }
+            },
+            "PreSaleItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID único do item"
+                    },
+                    "preSaleId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID da pré-venda"
+                    },
+                    "productId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do produto"
+                    },
+                    "quantity": {
+                        "type": "string",
+                        "description": "Quantidade (decimal como string)"
+                    },
+                    "unitPrice": {
+                        "type": "string",
+                        "description": "Preço unitário (decimal como string)"
+                    },
+                    "totalPrice": {
+                        "type": "string",
+                        "description": "Preço total do item (decimal como string)"
+                    },
+                    "discount": {
+                        "type": "string",
+                        "description": "Valor do desconto (decimal como string)"
+                    },
+                    "discountType": {
+                        "type": "string",
+                        "enum": [
+                            "fixed",
+                            "percentage"
+                        ],
+                        "description": "Tipo de desconto"
+                    },
+                    "discountPercentage": {
+                        "type": "string",
+                        "description": "Percentual de desconto (decimal como string)"
+                    },
+                    "product": {
+                        "$ref": "#/components/schemas/Product"
+                    }
+                }
+            },
+            "LoginRequest": {
+                "type": "object",
+                "required": [
+                    "email",
+                    "password"
+                ],
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "description": "Email do usuário"
+                    },
+                    "password": {
+                        "type": "string",
+                        "minLength": 6,
+                        "description": "Senha do usuário"
+                    }
+                }
+            },
+            "RegisterRequest": {
+                "type": "object",
+                "required": [
+                    "email",
+                    "password",
+                    "name",
+                    "role"
+                ],
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "description": "Email do usuário"
+                    },
+                    "password": {
+                        "type": "string",
+                        "minLength": 6,
+                        "description": "Senha do usuário"
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "description": "Nome completo do usuário"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "admin",
+                            "manager",
+                            "employee"
+                        ],
+                        "description": "Papel do usuário no sistema"
+                    }
+                }
+            },
+            "CreateCustomerRequest": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "email",
+                    "phone",
+                    "cpf"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "description": "Nome completo do cliente"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "description": "Email do cliente"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "description": "Telefone do cliente"
+                    },
+                    "cpf": {
+                        "type": "string",
+                        "pattern": "^[0-9]{3}\\.?[0-9]{3}\\.?[0-9]{3}-?[0-9]{2}$",
+                        "description": "CPF do cliente (com ou sem formatação)"
+                    },
+                    "address": {
+                        "type": "string",
+                        "description": "Endereço completo do cliente"
+                    }
+                }
+            },
+            "CreateProductRequest": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "unit",
+                    "purchasePrice",
+                    "salePrice",
+                    "saleType"
+                ],
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": "Código do produto (se não fornecido, será gerado automaticamente)"
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "description": "Nome do produto"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "description": "Unidade de medida"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Descrição do produto"
+                    },
+                    "stock": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Quantidade inicial em estoque"
+                    },
+                    "purchasePrice": {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                        "description": "Preço de compra"
+                    },
+                    "salePrice": {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                        "description": "Preço de venda"
+                    },
+                    "saleType": {
+                        "type": "string",
+                        "description": "Tipo de venda"
+                    }
+                }
+            },
+            "CreatePreSaleRequest": {
+                "type": "object",
+                "required": [
+                    "customerId",
+                    "status",
+                    "items"
+                ],
+                "properties": {
+                    "customerId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do cliente"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "pending",
+                            "approved",
+                            "cancelled",
+                            "converted"
+                        ],
+                        "description": "Status inicial da pré-venda"
+                    },
+                    "discount": {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                        "description": "Desconto da pré-venda"
+                    },
+                    "discountType": {
+                        "type": "string",
+                        "enum": [
+                            "fixed",
+                            "percentage"
+                        ],
+                        "description": "Tipo de desconto"
+                    },
+                    "discountPercentage": {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                        "description": "Percentual de desconto"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Observações da pré-venda"
+                    },
+                    "items": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "productId",
+                                "quantity",
+                                "unitPrice"
+                            ],
+                            "properties": {
+                                "productId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID do produto"
+                                },
+                                "quantity": {
+                                    "type": "string",
+                                    "pattern": "^[0-9]+(\\.[0-9]{1,3})?$",
+                                    "description": "Quantidade do produto"
+                                },
+                                "unitPrice": {
+                                    "type": "string",
+                                    "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                                    "description": "Preço unitário"
+                                },
+                                "discount": {
+                                    "type": "string",
+                                    "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                                    "description": "Desconto do item"
+                                },
+                                "discountType": {
+                                    "type": "string",
+                                    "enum": [
+                                        "fixed",
+                                        "percentage"
+                                    ],
+                                    "description": "Tipo de desconto do item"
+                                },
+                                "discountPercentage": {
+                                    "type": "string",
+                                    "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                                    "description": "Percentual de desconto do item"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "SuccessResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "type": "object",
+                        "description": "Dados da resposta"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Mensagem de sucesso"
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Timestamp da resposta"
+                    }
+                }
+            },
+            "PaginatedResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        },
+                        "description": "Array de dados"
+                    },
+                    "pagination": {
+                        "type": "object",
+                        "properties": {
+                            "total": {
+                                "type": "integer",
+                                "description": "Total de registros"
+                            },
+                            "page": {
+                                "type": "integer",
+                                "description": "Página atual"
+                            },
+                            "limit": {
+                                "type": "integer",
+                                "description": "Itens por página"
+                            },
+                            "totalPages": {
+                                "type": "integer",
+                                "description": "Total de páginas"
+                            },
+                            "hasNext": {
+                                "type": "boolean",
+                                "description": "Tem próxima página"
+                            },
+                            "hasPrev": {
+                                "type": "boolean",
+                                "description": "Tem página anterior"
+                            }
+                        }
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Mensagem de sucesso"
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Timestamp da resposta"
+                    }
+                }
+            },
+            "ErrorResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "error": {
+                        "type": "object",
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "description": "Código do erro"
+                            },
+                            "message": {
+                                "type": "string",
+                                "description": "Mensagem do erro"
+                            },
+                            "details": {
+                                "type": "object",
+                                "description": "Detalhes adicionais do erro"
+                            }
+                        }
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Timestamp da resposta"
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Caminho da requisição"
+                    }
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "paths": {
+        "/health": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Health check",
+                "description": "Verifica se a API está funcionando",
+                "security": [],
+                "responses": {
+                    "200": {
+                        "description": "API funcionando corretamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ok"
+                                        },
+                                        "timestamp": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "environment": {
+                                            "type": "string",
+                                            "example": "development"
+                                        },
+                                        "version": {
+                                            "type": "string",
+                                            "example": "1.0.0"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Login de usuário",
+                "description": "Autentica um usuário e retorna um token JWT",
+                "security": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login realizado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "user": {
+                                                            "$ref": "#/components/schemas/User"
+                                                        },
+                                                        "token": {
+                                                            "type": "string",
+                                                            "description": "Token JWT"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Credenciais inválidas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/me": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Perfil do usuário atual",
+                "description": "Retorna os dados do usuário autenticado",
+                "responses": {
+                    "200": {
+                        "description": "Dados do usuário",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/User"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token inválido ou expirado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Registro de usuário (Admin apenas)",
+                "description": "Registra um novo usuário no sistema (apenas administradores)",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Usuário criado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/User"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Acesso negado - apenas administradores",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Email já existe",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Logout do usuário",
+                "description": "Realiza logout (cliente deve remover o token)",
+                "responses": {
+                    "200": {
+                        "description": "Logout realizado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SuccessResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/customers": {
+            "get": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Listar clientes",
+                "description": "Lista todos os clientes com filtros opcionais",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número da página",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Itens por página",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 50
+                        }
+                    },
+                    {
+                        "name": "sortBy",
+                        "in": "query",
+                        "description": "Campo para ordenação",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "name",
+                                "email",
+                                "createdAt"
+                            ],
+                            "default": "name"
+                        }
+                    },
+                    {
+                        "name": "sortOrder",
+                        "in": "query",
+                        "description": "Ordem da classificação",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ],
+                            "default": "asc"
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "Filtrar por nome (busca parcial)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "email",
+                        "in": "query",
+                        "description": "Filtrar por email (busca parcial)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "cpf",
+                        "in": "query",
+                        "description": "Filtrar por CPF (busca parcial)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Busca global (nome, email ou CPF)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de clientes",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/PaginatedResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Customer"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Criar cliente",
+                "description": "Cria um novo cliente",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateCustomerRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Cliente criado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/Customer"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "CPF inválido",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CPF ou email já existe",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validação",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/customers/{id}": {
+            "get": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Buscar cliente por ID",
+                "description": "Retorna um cliente específico pelo ID",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "ID do cliente",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cliente encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/Customer"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente não encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Atualizar cliente",
+                "description": "Atualiza os dados de um cliente",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "ID do cliente",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "minLength": 2,
+                                        "description": "Nome completo do cliente"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "description": "Email do cliente"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "description": "Telefone do cliente"
+                                    },
+                                    "cpf": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]{3}\\.?[0-9]{3}\\.?[0-9]{3}-?[0-9]{2}$",
+                                        "description": "CPF do cliente"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "description": "Endereço do cliente"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cliente atualizado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/Customer"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente não encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CPF ou email já existe",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Excluir cliente",
+                "description": "Remove um cliente do sistema",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "ID do cliente",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Cliente excluído com sucesso"
+                    },
+                    "404": {
+                        "description": "Cliente não encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Cliente possui pré-vendas ativas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/products": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Listar produtos",
+                "description": "Lista todos os produtos com filtros opcionais",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número da página",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Itens por página",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 50
+                        }
+                    },
+                    {
+                        "name": "sortBy",
+                        "in": "query",
+                        "description": "Campo para ordenação",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "name",
+                                "code",
+                                "createdAt"
+                            ],
+                            "default": "name"
+                        }
+                    },
+                    {
+                        "name": "sortOrder",
+                        "in": "query",
+                        "description": "Ordem da classificação",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ],
+                            "default": "asc"
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "Filtrar por nome (busca parcial)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "code",
+                        "in": "query",
+                        "description": "Filtrar por código (busca parcial)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "saleType",
+                        "in": "query",
+                        "description": "Filtrar por tipo de venda",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Busca global (nome, código ou descrição)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de produtos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/PaginatedResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Product"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Criar produto",
+                "description": "Cria um novo produto",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateProductRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Produto criado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/Product"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Código do produto já existe",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validação",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/products/{id}": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Buscar produto por ID",
+                "description": "Retorna um produto específico pelo ID",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "ID do produto",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Produto encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/Product"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Produto não encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Atualizar produto",
+                "description": "Atualiza os dados de um produto (código não pode ser alterado)",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "ID do produto",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "minLength": 2,
+                                        "description": "Nome do produto"
+                                    },
+                                    "unit": {
+                                        "type": "string",
+                                        "description": "Unidade de medida"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "Descrição do produto"
+                                    },
+                                    "stock": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "description": "Quantidade em estoque"
+                                    },
+                                    "purchasePrice": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                                        "description": "Preço de compra"
+                                    },
+                                    "salePrice": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                                        "description": "Preço de venda"
+                                    },
+                                    "saleType": {
+                                        "type": "string",
+                                        "description": "Tipo de venda"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Produto atualizado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/Product"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Produto não encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Excluir produto",
+                "description": "Remove um produto do sistema",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "ID do produto",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Produto excluído com sucesso"
+                    },
+                    "404": {
+                        "description": "Produto não encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Produto possui pré-vendas ativas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/presales": {
+            "get": {
+                "tags": [
+                    "PreSales"
+                ],
+                "summary": "Listar pré-vendas",
+                "description": "Lista todas as pré-vendas com filtros opcionais",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número da página",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Itens por página",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 50
+                        }
+                    },
+                    {
+                        "name": "sortBy",
+                        "in": "query",
+                        "description": "Campo para ordenação",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "createdAt",
+                                "total",
+                                "status"
+                            ],
+                            "default": "createdAt"
+                        }
+                    },
+                    {
+                        "name": "sortOrder",
+                        "in": "query",
+                        "description": "Ordem da classificação",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ],
+                            "default": "desc"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filtrar por status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "draft",
+                                "pending",
+                                "approved",
+                                "cancelled",
+                                "converted"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "customerId",
+                        "in": "query",
+                        "description": "Filtrar por ID do cliente",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de pré-vendas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/PaginatedResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/PreSale"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "PreSales"
+                ],
+                "summary": "Criar pré-venda",
+                "description": "Cria uma nova pré-venda com itens",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreatePreSaleRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Pré-venda criada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PreSale"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Cliente ou produto não encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validação",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/presales/{id}": {
+            "get": {
+                "tags": [
+                    "PreSales"
+                ],
+                "summary": "Buscar pré-venda por ID",
+                "description": "Retorna uma pré-venda específica com itens e dados do cliente",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "ID da pré-venda",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pré-venda encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PreSale"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pré-venda não encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "PreSales"
+                ],
+                "summary": "Atualizar pré-venda",
+                "description": "Atualiza os dados de uma pré-venda e seus itens",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "ID da pré-venda",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "draft",
+                                            "pending",
+                                            "approved",
+                                            "cancelled",
+                                            "converted"
+                                        ],
+                                        "description": "Status da pré-venda"
+                                    },
+                                    "discount": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                                        "description": "Desconto da pré-venda"
+                                    },
+                                    "discountType": {
+                                        "type": "string",
+                                        "enum": [
+                                            "fixed",
+                                            "percentage"
+                                        ],
+                                        "description": "Tipo de desconto"
+                                    },
+                                    "discountPercentage": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                                        "description": "Percentual de desconto"
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "description": "Observações da pré-venda"
+                                    },
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "productId",
+                                                "quantity",
+                                                "unitPrice"
+                                            ],
+                                            "properties": {
+                                                "productId": {
+                                                    "type": "string",
+                                                    "format": "uuid",
+                                                    "description": "ID do produto"
+                                                },
+                                                "quantity": {
+                                                    "type": "string",
+                                                    "pattern": "^[0-9]+(\\.[0-9]{1,3})?$",
+                                                    "description": "Quantidade do produto"
+                                                },
+                                                "unitPrice": {
+                                                    "type": "string",
+                                                    "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                                                    "description": "Preço unitário"
+                                                },
+                                                "discount": {
+                                                    "type": "string",
+                                                    "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                                                    "description": "Desconto do item"
+                                                },
+                                                "discountType": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "fixed",
+                                                        "percentage"
+                                                    ],
+                                                    "description": "Tipo de desconto do item"
+                                                },
+                                                "discountPercentage": {
+                                                    "type": "string",
+                                                    "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+                                                    "description": "Percentual de desconto do item"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pré-venda atualizada com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PreSale"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pré-venda não encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "PreSales"
+                ],
+                "summary": "Excluir pré-venda",
+                "description": "Remove uma pré-venda e seus itens do sistema",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "ID da pré-venda",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Pré-venda excluída com sucesso"
+                    },
+                    "404": {
+                        "description": "Pré-venda não encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/presales/{id}/status": {
+            "put": {
+                "tags": [
+                    "PreSales"
+                ],
+                "summary": "Alterar status da pré-venda",
+                "description": "Altera apenas o status de uma pré-venda",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "ID da pré-venda",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "draft",
+                                            "pending",
+                                            "approved",
+                                            "cancelled",
+                                            "converted"
+                                        ],
+                                        "description": "Novo status da pré-venda"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status alterado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/SuccessResponse"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PreSale"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Transição de status inválida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pré-venda não encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "System",
+            "description": "Endpoints do sistema"
         },
         {
             "name": "Authentication",
-            "item": [
-                {
-                    "name": "Login",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "if (pm.response.code === 200) {",
-                                    "    const response = pm.response.json();",
-                                    "    if (response.data && response.data.token) {",
-                                    "        pm.collectionVariables.set('token', response.data.token);",
-                                    "    }",
-                                    "}"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
-                    "request": {
-                        "auth": {
-                            "type": "noauth"
-                        },
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"admin@flowcrm.com\",\n  \"password\": \"admin123\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/auth/login",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "auth",
-                                "login"
-                            ]
-                        },
-                        "description": "Autenticação de usuário"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Register User",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"name\": \"Nome do Usuário\",\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"employee\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/auth/register",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "auth",
-                                "register"
-                            ]
-                        },
-                        "description": "Registro de novo usuário (apenas admin)"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Profile",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/auth/profile",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "auth",
-                                "profile"
-                            ]
-                        },
-                        "description": "Obter perfil do usuário atual"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Logout",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/auth/logout",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "auth",
-                                "logout"
-                            ]
-                        },
-                        "description": "Logout do usuário"
-                    },
-                    "response": []
-                }
-            ]
+            "description": "Autenticação e autorização"
         },
         {
             "name": "Customers",
-            "item": [
-                {
-                    "name": "List Customers",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/customers?page=1&limit=10&sortBy=name&sortOrder=asc",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "api", "customers"
-                            ],
-                            "query": [
-                                {
-                                    "key": "page",
-                                    "value": "1",
-                                    "description": "Número da página"
-                                },
-                                {
-                                    "key": "limit",
-                                    "value": "10",
-                                    "description": "Itens por página"
-                                },
-                                {
-                                    "key": "sortBy",
-                                    "value": "name",
-                                    "description": "Campo para ordenação (name|email|createdAt)"
-                                },
-                                {
-                                    "key": "sortOrder",
-                                    "value": "asc",
-                                    "description": "Ordem (asc|desc)"
-                                },
-                                {
-                                    "key": "name",
-                                    "value": "",
-                                    "description": "Filtro por nome",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "email",
-                                    "value": "",
-                                    "description": "Filtro por email",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "cpf",
-                                    "value": "",
-                                    "description": "Filtro por CPF",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "search",
-                                    "value": "",
-                                    "description": "Busca geral",
-                                    "disabled": true
-                                }
-                            ]
-                        },
-                        "description": "Listar clientes com filtros"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Customer",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/customers/:id",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "customers",
-                                ":id"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "id",
-                                    "value": "customer-uuid-here"
-                                }
-                            ]
-                        },
-                        "description": "Obter cliente por ID"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Create Customer",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao@example.com\",\n  \"phone\": \"(11) 99999-9999\",\n  \"cpf\": \"123.456.789-00\",\n  \"address\": \"Rua das Flores, 123\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/customers",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "customers"
-                            ]
-                        },
-                        "description": "Criar novo cliente"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Update Customer",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"name\": \"João Silva Atualizado\",\n  \"email\": \"joao.novo@example.com\",\n  \"phone\": \"(11) 88888-8888\",\n  \"address\": \"Novo endereço\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/customers/:id",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "customers",
-                                ":id"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "id",
-                                    "value": "customer-uuid-here"
-                                }
-                            ]
-                        },
-                        "description": "Atualizar cliente"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Delete Customer",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/customers/:id",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "customers",
-                                ":id"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "id",
-                                    "value": "customer-uuid-here"
-                                }
-                            ]
-                        },
-                        "description": "Deletar cliente"
-                    },
-                    "response": []
-                }
-            ]
+            "description": "Gerenciamento de clientes"
         },
         {
             "name": "Products",
-            "item": [
-                {
-                    "name": "List Products",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/products?page=1&limit=10&sortBy=name&sortOrder=asc",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "products"
-                            ],
-                            "query": [
-                                {
-                                    "key": "page",
-                                    "value": "1",
-                                    "description": "Número da página"
-                                },
-                                {
-                                    "key": "limit",
-                                    "value": "10",
-                                    "description": "Itens por página"
-                                },
-                                {
-                                    "key": "sortBy",
-                                    "value": "name",
-                                    "description": "Campo para ordenação (code|name|stock|salePrice|createdAt)"
-                                },
-                                {
-                                    "key": "sortOrder",
-                                    "value": "asc",
-                                    "description": "Ordem (asc|desc)"
-                                },
-                                {
-                                    "key": "code",
-                                    "value": "",
-                                    "description": "Filtro por código",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "name",
-                                    "value": "",
-                                    "description": "Filtro por nome",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "saleType",
-                                    "value": "",
-                                    "description": "Filtro por tipo de venda",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "search",
-                                    "value": "",
-                                    "description": "Busca geral",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "minStock",
-                                    "value": "",
-                                    "description": "Estoque mínimo",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "maxStock",
-                                    "value": "",
-                                    "description": "Estoque máximo",
-                                    "disabled": true
-                                }
-                            ]
-                        },
-                        "description": "Listar produtos com filtros"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Product",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/products/:id",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "products",
-                                ":id"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "id",
-                                    "value": "product-uuid-here"
-                                }
-                            ]
-                        },
-                        "description": "Obter produto por ID"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Create Product",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"code\": \"PROD001\",\n  \"name\": \"Produto Exemplo\",\n  \"unit\": \"UN\",\n  \"description\": \"Descrição do produto\",\n  \"stock\": 100,\n  \"purchasePrice\": \"10.50\",\n  \"salePrice\": \"15.75\",\n  \"saleType\": \"unit\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/products",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "products"
-                            ]
-                        },
-                        "description": "Criar novo produto"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Update Product",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"name\": \"Produto Atualizado\",\n  \"stock\": 150,\n  \"salePrice\": \"18.00\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/products/:id",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "products",
-                                ":id"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "id",
-                                    "value": "product-uuid-here"
-                                }
-                            ]
-                        },
-                        "description": "Atualizar produto"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Delete Product",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/products/:id",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "products",
-                                ":id"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "id",
-                                    "value": "product-uuid-here"
-                                }
-                            ]
-                        },
-                        "description": "Deletar produto"
-                    },
-                    "response": []
-                }
-            ]
+            "description": "Gerenciamento de produtos"
         },
         {
-            "name": "Presales",
-            "item": [
-                {
-                    "name": "List Presales",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/presales?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "presales"
-                            ],
-                            "query": [
-                                {
-                                    "key": "page",
-                                    "value": "1",
-                                    "description": "Número da página"
-                                },
-                                {
-                                    "key": "limit",
-                                    "value": "10",
-                                    "description": "Itens por página"
-                                },
-                                {
-                                    "key": "sortBy",
-                                    "value": "createdAt",
-                                    "description": "Campo para ordenação (createdAt|total|status)"
-                                },
-                                {
-                                    "key": "sortOrder",
-                                    "value": "desc",
-                                    "description": "Ordem (asc|desc)"
-                                },
-                                {
-                                    "key": "customerId",
-                                    "value": "",
-                                    "description": "Filtro por cliente",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "status",
-                                    "value": "",
-                                    "description": "Filtro por status (draft|pending|approved|cancelled|converted)",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "customerName",
-                                    "value": "",
-                                    "description": "Filtro por nome do cliente",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "dateFrom",
-                                    "value": "",
-                                    "description": "Data inicial (YYYY-MM-DD)",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "dateTo",
-                                    "value": "",
-                                    "description": "Data final (YYYY-MM-DD)",
-                                    "disabled": true
-                                },
-                                {
-                                    "key": "search",
-                                    "value": "",
-                                    "description": "Busca geral",
-                                    "disabled": true
-                                }
-                            ]
-                        },
-                        "description": "Listar pré-vendas com filtros"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Presale",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/presales/:id",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "presales",
-                                ":id"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "id",
-                                    "value": "presale-uuid-here"
-                                }
-                            ]
-                        },
-                        "description": "Obter pré-venda por ID com itens"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Create Presale",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"customerId\": \"customer-uuid-here\",\n  \"discount\": \"10.00\",\n  \"notes\": \"Pré-venda de exemplo\",\n  \"items\": [\n    {\n      \"productId\": \"product-uuid-here\",\n      \"quantity\": 2,\n      \"unitPrice\": \"15.75\"\n    }\n  ]\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/presales",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "presales"
-                            ]
-                        },
-                        "description": "Criar nova pré-venda"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Update Presale",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"discount\": \"15.00\",\n  \"notes\": \"Pré-venda atualizada\",\n  \"items\": [\n    {\n      \"productId\": \"product-uuid-here\",\n      \"quantity\": 3,\n      \"unitPrice\": \"15.75\"\n    }\n  ]\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/presales/:id",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "presales",
-                                ":id"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "id",
-                                    "value": "presale-uuid-here"
-                                }
-                            ]
-                        },
-                        "description": "Atualizar pré-venda"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Update Presale Status",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"status\": \"approved\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/presales/:id/status",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "presales",
-                                ":id",
-                                "status"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "id",
-                                    "value": "presale-uuid-here"
-                                }
-                            ]
-                        },
-                        "description": "Atualizar status da pré-venda"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Delete Presale",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/presales/:id",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api", "presales",
-                                ":id"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "id",
-                                    "value": "presale-uuid-here"
-                                }
-                            ]
-                        },
-                        "description": "Deletar pré-venda"
-                    },
-                    "response": []
-                }
-            ]
+            "name": "PreSales",
+            "description": "Gerenciamento de pré-vendas"
         }
     ]
 }

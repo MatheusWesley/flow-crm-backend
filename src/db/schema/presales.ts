@@ -3,6 +3,7 @@ import { customers } from './customers';
 import { products } from './products';
 
 export const presaleStatusEnum = pgEnum('presale_status', ['draft', 'pending', 'approved', 'cancelled', 'converted']);
+export const discountTypeEnum = pgEnum('discount_type', ['fixed', 'percentage']);
 
 export const preSales = pgTable('presales', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -10,6 +11,8 @@ export const preSales = pgTable('presales', {
   status: presaleStatusEnum('status').notNull(),
   total: decimal('total', { precision: 10, scale: 2 }).notNull(),
   discount: decimal('discount', { precision: 10, scale: 2 }).default('0').notNull(),
+  discountType: discountTypeEnum('discount_type').default('fixed').notNull(),
+  discountPercentage: decimal('discount_percentage', { precision: 5, scale: 2 }).default('0').notNull(),
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
@@ -22,5 +25,7 @@ export const preSaleItems = pgTable('presale_items', {
   quantity: decimal('quantity', { precision: 10, scale: 3 }).notNull(),
   unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
   totalPrice: decimal('total_price', { precision: 10, scale: 2 }).notNull(),
-  discount: decimal('discount', { precision: 10, scale: 2 }).default('0').notNull()
+  discount: decimal('discount', { precision: 10, scale: 2 }).default('0').notNull(),
+  discountType: discountTypeEnum('discount_type').default('fixed').notNull(),
+  discountPercentage: decimal('discount_percentage', { precision: 5, scale: 2 }).default('0').notNull()
 });

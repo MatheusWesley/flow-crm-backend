@@ -10,10 +10,22 @@ const preSaleStatusSchema = z.enum(['draft', 'pending', 'approved', 'cancelled',
   message: 'Status must be one of: draft, pending, approved, cancelled, converted'
 });
 
+// Discount type enum validation
+const discountTypeSchema = z.enum(['fixed', 'percentage'], {
+  message: 'Discount type must be either fixed or percentage'
+});
+
 // Decimal string validation for monetary values
 const decimalStringSchema = z
   .string()
   .regex(/^\d+(\.\d{1,2})?$/, 'Must be a valid decimal number with up to 2 decimal places')
+  .transform(val => val);
+
+// Percentage decimal string validation (up to 2 decimal places, max 100)
+const percentageStringSchema = z
+  .string()
+  .regex(/^\d+(\.\d{1,2})?$/, 'Must be a valid decimal number with up to 2 decimal places')
+  .refine(val => parseFloat(val) >= 0 && parseFloat(val) <= 100, 'Percentage must be between 0 and 100')
   .transform(val => val);
 
 // Quantity decimal string validation (up to 3 decimal places)
@@ -34,7 +46,9 @@ const createPreSaleItemSchema = z.object({
   discount: decimalStringSchema
     .optional()
     .default('0')
-    .refine(val => parseFloat(val) >= 0, 'Discount must be non-negative')
+    .refine(val => parseFloat(val) >= 0, 'Discount must be non-negative'),
+  discountType: discountTypeSchema.optional().default('fixed'),
+  discountPercentage: percentageStringSchema.optional().default('0')
 }).strict();
 
 // Pre-sale item schema for updates
@@ -46,17 +60,21 @@ const updatePreSaleItemSchema = z.object({
   discount: decimalStringSchema
     .optional()
     .default('0')
-    .refine(val => parseFloat(val) >= 0, 'Discount must be non-negative')
+    .refine(val => parseFloat(val) >= 0, 'Discount must be non-negative'),
+  discountType: discountTypeSchema.optional().default('fixed'),
+  discountPercentage: percentageStringSchema.optional().default('0')
 }).strict();
 
 // Create pre-sale schema
 export const createPreSaleSchema = z.object({
   customerId: uuidSchema,
-  status: preSaleStatusSchema.optional().default('draft'),
+  status: preSaleStatusSchema.optional().default('pending'),
   discount: decimalStringSchema
     .optional()
     .default('0')
     .refine(val => parseFloat(val) >= 0, 'Discount must be non-negative'),
+  discountType: discountTypeSchema.optional().default('fixed'),
+  discountPercentage: percentageStringSchema.optional().default('0'),
   notes: z
     .string()
     .max(1000, 'Notes must be less than 1000 characters')
@@ -77,6 +95,8 @@ export const updatePreSaleSchema = z.object({
   discount: decimalStringSchema
     .optional()
     .refine(val => val === undefined || parseFloat(val) >= 0, 'Discount must be non-negative'),
+  discountType: discountTypeSchema.optional(),
+  discountPercentage: percentageStringSchema.optional(),
   notes: z
     .string()
     .max(1000, 'Notes must be less than 1000 characters')
@@ -90,10 +110,10 @@ export const updatePreSaleSchema = z.object({
     .max(100, 'Maximum 100 items allowed per pre-sale')
     .optional()
 }).strict()
-.refine(
-  (data) => Object.keys(data).length > 0,
-  'At least one field must be provided for update'
-);
+  .refine(
+    (data) => Object.keys(data).length > 0,
+    'At least one field must be provided for update'
+  );
 
 // Update pre-sale status schema
 export const updatePreSaleStatusSchema = z.object({
@@ -107,61 +127,89 @@ export const preSaleFiltersSchema = z.object({
     .optional()
     .transform(val => val ? parseInt(val, 10) : 1)
     .refine(val => val >= 1, 'Page must be greater than 0'),
-  
+
   limit: z
     .string()
     .optional()
     .transform(val => val ? parseInt(val, 10) : 50)
     .refine(val => val >= 1 && val <= 100, 'Limit must be between 1 and 100'),
-  
+
   sortBy: z
     .enum(['createdAt', 'total', 'status'], {
       message: 'Sort field must be createdAt, total, or status'
     })
     .optional()
     .default('createdAt'),
-  
+
   sortOrder: z
     .enum(['asc', 'desc'], {
       message: 'Sort order must be asc or desc'
     })
     .optional()
     .default('desc'),
-  
+
   customerId: uuidSchema.optional(),
-  
+
   status: z
     .union([
       preSaleStatusSchema,
       z.array(preSaleStatusSchema).min(1, 'At least one status must be provided')
     ])
     .optional(),
-  
+
   customerName: z
     .string()
-    .min(1, 'Customer name filter cannot be empty')
-    .max(255, 'Customer name filter must be less than 255 characters')
-    .trim()
-    .optional(),
-  
-  dateFrom: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
-    .refine(val => !isNaN(Date.parse(val)), 'Invalid date format')
-    .optional(),
-  
-  dateTo: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
-    .refine(val => !isNaN(Date.parse(val)), 'Invalid date format')
-    .optional(),
-  
-  search: z
-    .string()
-    .min(1, 'Search term cannot be empty')
-    .max(255, 'Search term must be less than 255 characters')
     .trim()
     .optional()
+    .transform(val => {
+      // Treat empty strings, 'string', 'undefined', 'null' as undefined
+      if (!val || val === '' || val === 'string' || val === 'undefined' || val === 'null') {
+        return undefined;
+      }
+      return val;
+    })
+    .refine(val => !val || val.length <= 255, 'Customer name filter must be less than 255 characters'),
+
+  dateFrom: z
+    .string()
+    .trim()
+    .optional()
+    .transform(val => {
+      // Treat empty strings, 'string', 'undefined', 'null' as undefined
+      if (!val || val === '' || val === 'string' || val === 'undefined' || val === 'null') {
+        return undefined;
+      }
+      return val;
+    })
+    .refine(val => !val || /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format')
+    .refine(val => !val || !isNaN(Date.parse(val)), 'Invalid date format'),
+
+  dateTo: z
+    .string()
+    .trim()
+    .optional()
+    .transform(val => {
+      // Treat empty strings, 'string', 'undefined', 'null' as undefined
+      if (!val || val === '' || val === 'string' || val === 'undefined' || val === 'null') {
+        return undefined;
+      }
+      return val;
+    })
+    .refine(val => !val || /^\d{4}-\d{2}-\d{2}$/.test(val), 'Date must be in YYYY-MM-DD format')
+    .refine(val => !val || !isNaN(Date.parse(val)), 'Invalid date format'),
+
+  search: z
+    .string()
+    .trim()
+    .optional()
+    .transform(val => {
+      // Treat empty strings, 'string', 'undefined', 'null' as undefined
+      if (!val || val === '' || val === 'string' || val === 'undefined' || val === 'null') {
+        return undefined;
+      }
+      return val;
+    })
+    .refine(val => !val || val.length <= 255, 'Search term must be less than 255 characters')
 }).refine(
   (data) => {
     if (data.dateFrom && data.dateTo) {
@@ -186,6 +234,8 @@ export const preSaleItemResponseSchema = z.object({
   unitPrice: z.string(),
   totalPrice: z.string(),
   discount: z.string(),
+  discountType: discountTypeSchema,
+  discountPercentage: z.string(),
   product: z.object({
     id: z.string().uuid(),
     code: z.string(),
@@ -210,6 +260,8 @@ export const preSaleResponseSchema = z.object({
   status: preSaleStatusSchema,
   total: z.string(),
   discount: z.string(),
+  discountType: discountTypeSchema,
+  discountPercentage: z.string(),
   notes: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date()

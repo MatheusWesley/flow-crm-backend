@@ -8,6 +8,11 @@ import { products } from '../db/schema/products';
 import { eq } from 'drizzle-orm';
 
 /**
+ * Discount type
+ */
+export type DiscountType = 'fixed' | 'percentage';
+
+/**
  * Interface for pre-sale item calculation data
  */
 export interface PreSaleItemCalculation {
@@ -15,6 +20,8 @@ export interface PreSaleItemCalculation {
   quantity: string | number;
   unitPrice: string | number;
   discount?: string | number;
+  discountType?: DiscountType;
+  discountPercentage?: string | number;
 }
 
 /**
@@ -321,4 +328,94 @@ export function validateCalculationInputs(items: PreSaleItemCalculation[]): { is
     isValid: errors.length === 0,
     errors,
   };
+}
+
+/**
+ * Convert percentage discount to fixed value
+ * @param subtotal - The subtotal amount to calculate percentage from
+ * @param percentage - The percentage value (0-100)
+ * @returns The fixed discount value in currency
+ */
+export function convertPercentageToFixed(
+  subtotal: string | number,
+  percentage: string | number
+): number {
+  const subtotalValue = typeof subtotal === 'string' ? parseFloat(subtotal) : subtotal;
+  const percentageValue = typeof percentage === 'string' ? parseFloat(percentage) : percentage;
+
+  if (isNaN(subtotalValue) || subtotalValue < 0) {
+    throw new Error('Invalid subtotal: must be a non-negative number');
+  }
+
+  if (isNaN(percentageValue) || percentageValue < 0 || percentageValue > 100) {
+    throw new Error('Invalid percentage: must be between 0 and 100');
+  }
+
+  const fixedDiscount = (subtotalValue * percentageValue) / 100;
+  return roundMoney(fixedDiscount);
+}
+
+/**
+ * Convert fixed discount value to percentage
+ * @param subtotal - The subtotal amount to calculate percentage from
+ * @param fixedValue - The fixed discount value in currency
+ * @returns The percentage discount value (0-100)
+ */
+export function convertFixedToPercentage(
+  subtotal: string | number,
+  fixedValue: string | number
+): number {
+  const subtotalValue = typeof subtotal === 'string' ? parseFloat(subtotal) : subtotal;
+  const fixedDiscountValue = typeof fixedValue === 'string' ? parseFloat(fixedValue) : fixedValue;
+
+  if (isNaN(subtotalValue) || subtotalValue < 0) {
+    throw new Error('Invalid subtotal: must be a non-negative number');
+  }
+
+  if (isNaN(fixedDiscountValue) || fixedDiscountValue < 0) {
+    throw new Error('Invalid fixed discount: must be a non-negative number');
+  }
+
+  // Prevent division by zero
+  if (subtotalValue === 0) {
+    return 0;
+  }
+
+  // Ensure discount doesn't exceed subtotal
+  const actualDiscount = Math.min(fixedDiscountValue, subtotalValue);
+  const percentage = (actualDiscount / subtotalValue) * 100;
+  
+  return roundMoney(percentage);
+}
+
+/**
+ * Calculate discount with automatic conversion between types
+ * @param subtotal - The subtotal amount
+ * @param discountValue - The discount value (fixed or percentage)
+ * @param discountType - The type of discount ('fixed' or 'percentage')
+ * @returns Object with both fixed value and percentage
+ */
+export function calculateDiscountWithConversion(
+  subtotal: string | number,
+  discountValue: string | number,
+  discountType: DiscountType = 'fixed'
+): { fixedValue: number; percentage: number; discountAmount: number } {
+  const subtotalValue = typeof subtotal === 'string' ? parseFloat(subtotal) : subtotal;
+  const discount = typeof discountValue === 'string' ? parseFloat(discountValue) : discountValue;
+
+  if (discountType === 'percentage') {
+    const fixedValue = convertPercentageToFixed(subtotalValue, discount);
+    return {
+      fixedValue,
+      percentage: roundMoney(discount),
+      discountAmount: fixedValue,
+    };
+  } else {
+    const percentage = convertFixedToPercentage(subtotalValue, discount);
+    return {
+      fixedValue: roundMoney(discount),
+      percentage,
+      discountAmount: roundMoney(discount),
+    };
+  }
 }

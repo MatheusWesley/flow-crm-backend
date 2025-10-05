@@ -8,8 +8,15 @@ import {
   calculatePreSaleTotals,
   validateStockForPreSale,
   PreSaleItemCalculation,
-  roundMoney
+  roundMoney,
+  calculateDiscountWithConversion,
+  DiscountType as CalcDiscountType
 } from '../utils/presales-calculations';
+
+/**
+ * Discount type
+ */
+export type DiscountType = 'fixed' | 'percentage';
 
 /**
  * PreSale entity interface
@@ -20,6 +27,8 @@ export interface PreSale {
   status: PreSaleStatus;
   total: string;
   discount: string;
+  discountType: DiscountType;
+  discountPercentage: string;
   notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -36,6 +45,8 @@ export interface PreSaleItem {
   unitPrice: string;
   totalPrice: string;
   discount: string;
+  discountType: DiscountType;
+  discountPercentage: string;
 }
 
 /**
@@ -66,6 +77,8 @@ export interface CreatePreSaleData {
   customerId: string;
   status?: PreSaleStatus;
   discount?: string;
+  discountType?: DiscountType;
+  discountPercentage?: string;
   notes?: string | null;
   items: CreatePreSaleItemData[];
 }
@@ -78,6 +91,8 @@ export interface CreatePreSaleItemData {
   quantity: string;
   unitPrice: string;
   discount?: string;
+  discountType?: DiscountType;
+  discountPercentage?: string;
 }
 
 /**
@@ -87,6 +102,8 @@ export interface UpdatePreSaleData {
   customerId?: string;
   status?: PreSaleStatus;
   discount?: string;
+  discountType?: DiscountType;
+  discountPercentage?: string;
   notes?: string | null;
   items?: UpdatePreSaleItemData[];
 }
@@ -100,6 +117,8 @@ export interface UpdatePreSaleItemData {
   quantity: string;
   unitPrice: string;
   discount?: string;
+  discountType?: DiscountType;
+  discountPercentage?: string;
 }
 
 /**
@@ -210,6 +229,8 @@ export class PreSalesService {
         status: preSales.status,
         total: preSales.total,
         discount: preSales.discount,
+        discountType: preSales.discountType,
+        discountPercentage: preSales.discountPercentage,
         notes: preSales.notes,
         createdAt: preSales.createdAt,
         updatedAt: preSales.updatedAt,
@@ -238,6 +259,8 @@ export class PreSalesService {
         unitPrice: preSaleItems.unitPrice,
         totalPrice: preSaleItems.totalPrice,
         discount: preSaleItems.discount,
+        discountType: preSaleItems.discountType,
+        discountPercentage: preSaleItems.discountPercentage,
         productCode: products.code,
         productName: products.name,
         productUnit: products.unit,
@@ -254,6 +277,8 @@ export class PreSalesService {
       status: preSale.status,
       total: preSale.total,
       discount: preSale.discount,
+      discountType: preSale.discountType,
+      discountPercentage: preSale.discountPercentage,
       notes: preSale.notes,
       createdAt: preSale.createdAt,
       updatedAt: preSale.updatedAt,
@@ -271,6 +296,8 @@ export class PreSalesService {
         unitPrice: item.unitPrice,
         totalPrice: item.totalPrice,
         discount: item.discount,
+        discountType: item.discountType,
+        discountPercentage: item.discountPercentage,
         product: {
           id: item.productId,
           code: item.productCode,
@@ -294,8 +321,13 @@ export class PreSalesService {
     // Validate products exist and have sufficient stock
     await this.validateProductsAndStock(preSaleData.items);
 
-    // Calculate totals
-    const { subtotal, total } = await this.calculateTotals(preSaleData.items, preSaleData.discount || '0');
+    // Calculate totals and handle discount conversion
+    const { subtotal, total, globalDiscount } = await this.calculateTotalsWithConversion(
+      preSaleData.items,
+      preSaleData.discount,
+      preSaleData.discountType,
+      preSaleData.discountPercentage
+    );
 
     // Create pre-sale
     const preSaleResult = await db
@@ -304,19 +336,34 @@ export class PreSalesService {
         customerId: preSaleData.customerId,
         status: preSaleData.status || 'draft',
         total: total.toString(),
-        discount: preSaleData.discount || '0',
+        discount: globalDiscount.fixedValue.toString(),
+        discountType: preSaleData.discountType || 'fixed',
+        discountPercentage: globalDiscount.percentage.toString(),
         notes: preSaleData.notes || null,
       })
       .returning();
 
     const createdPreSale = preSaleResult[0];
 
-    // Create pre-sale items
+    // Create pre-sale items with discount conversion
     const itemsToInsert = preSaleData.items.map(item => {
       const quantity = parseFloat(item.quantity);
       const unitPrice = parseFloat(item.unitPrice);
-      const discount = parseFloat(item.discount || '0');
-      const totalPrice = (quantity * unitPrice) - discount;
+      const lineSubtotal = quantity * unitPrice;
+      
+      // Calculate discount with conversion
+      const itemDiscountType = item.discountType || 'fixed';
+      const itemDiscountValue = itemDiscountType === 'percentage' 
+        ? (item.discountPercentage || '0')
+        : (item.discount || '0');
+      
+      const discountCalc = calculateDiscountWithConversion(
+        lineSubtotal,
+        itemDiscountValue,
+        itemDiscountType
+      );
+      
+      const totalPrice = lineSubtotal - discountCalc.discountAmount;
 
       return {
         preSaleId: createdPreSale.id,
@@ -324,7 +371,9 @@ export class PreSalesService {
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: totalPrice.toString(),
-        discount: item.discount || '0',
+        discount: discountCalc.fixedValue.toString(),
+        discountType: itemDiscountType,
+        discountPercentage: discountCalc.percentage.toString(),
       };
     });
 
@@ -372,12 +421,25 @@ export class PreSalesService {
       // Delete existing items
       await db.delete(preSaleItems).where(eq(preSaleItems.preSaleId, id));
 
-      // Insert new items
+      // Insert new items with discount conversion
       const itemsToInsert = preSaleData.items.map(item => {
         const quantity = parseFloat(item.quantity);
         const unitPrice = parseFloat(item.unitPrice);
-        const discount = parseFloat(item.discount || '0');
-        const totalPrice = (quantity * unitPrice) - discount;
+        const lineSubtotal = quantity * unitPrice;
+        
+        // Calculate discount with conversion
+        const itemDiscountType = item.discountType || 'fixed';
+        const itemDiscountValue = itemDiscountType === 'percentage' 
+          ? (item.discountPercentage || '0')
+          : (item.discount || '0');
+        
+        const discountCalc = calculateDiscountWithConversion(
+          lineSubtotal,
+          itemDiscountValue,
+          itemDiscountType
+        );
+        
+        const totalPrice = lineSubtotal - discountCalc.discountAmount;
 
         return {
           preSaleId: id,
@@ -385,15 +447,30 @@ export class PreSalesService {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           totalPrice: totalPrice.toString(),
-          discount: item.discount || '0',
+          discount: discountCalc.fixedValue.toString(),
+          discountType: itemDiscountType,
+          discountPercentage: discountCalc.percentage.toString(),
         };
       });
 
       await db.insert(preSaleItems).values(itemsToInsert);
 
-      // Recalculate totals
-      const { subtotal, total } = await this.calculateTotals(preSaleData.items, preSaleData.discount || existingPreSale.discount);
+      // Recalculate totals with discount conversion
+      const discountType = preSaleData.discountType || existingPreSale.discountType;
+      const discountValue = preSaleData.discountType === 'percentage'
+        ? preSaleData.discountPercentage
+        : preSaleData.discount;
+      
+      const { subtotal, total, globalDiscount } = await this.calculateTotalsWithConversion(
+        preSaleData.items,
+        discountValue,
+        discountType,
+        preSaleData.discountPercentage
+      );
+      
       updateData.total = total.toString();
+      updateData.discount = globalDiscount.fixedValue.toString();
+      updateData.discountPercentage = globalDiscount.percentage.toString();
     }
 
     if (preSaleData.customerId !== undefined) {
@@ -404,8 +481,12 @@ export class PreSalesService {
       updateData.status = preSaleData.status;
     }
 
-    if (preSaleData.discount !== undefined) {
-      updateData.discount = preSaleData.discount;
+    // Handle discount updates with conversion
+    if (preSaleData.discount !== undefined || preSaleData.discountType !== undefined || preSaleData.discountPercentage !== undefined) {
+      const newDiscountType = preSaleData.discountType || existingPreSale.discountType;
+      const newDiscountValue = newDiscountType === 'percentage'
+        ? (preSaleData.discountPercentage || existingPreSale.discountPercentage)
+        : (preSaleData.discount || existingPreSale.discount);
 
       // Recalculate total if discount changed and no items update
       if (!preSaleData.items) {
@@ -414,9 +495,26 @@ export class PreSalesService {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           discount: item.discount,
+          discountType: item.discountType,
+          discountPercentage: item.discountPercentage,
         }));
-        const { subtotal, total } = await this.calculateTotals(currentItems, preSaleData.discount);
+        
+        const { subtotal, total, globalDiscount } = await this.calculateTotalsWithConversion(
+          currentItems,
+          newDiscountValue,
+          newDiscountType,
+          preSaleData.discountPercentage
+        );
+        
         updateData.total = total.toString();
+        updateData.discount = globalDiscount.fixedValue.toString();
+        updateData.discountType = newDiscountType;
+        updateData.discountPercentage = globalDiscount.percentage.toString();
+      } else {
+        // If items are being updated, discount conversion is already handled above
+        if (preSaleData.discountType !== undefined) {
+          updateData.discountType = preSaleData.discountType;
+        }
       }
     }
 
@@ -504,6 +602,63 @@ export class PreSalesService {
     return {
       subtotal: roundMoney(result.subtotal),
       total: roundMoney(result.total),
+    };
+  }
+
+  /**
+   * Calculate totals with discount type conversion
+   */
+  async calculateTotalsWithConversion(
+    items: CreatePreSaleItemData[] | UpdatePreSaleItemData[],
+    discountValue?: string,
+    discountType?: DiscountType,
+    discountPercentage?: string
+  ): Promise<{ 
+    subtotal: number; 
+    total: number; 
+    globalDiscount: { fixedValue: number; percentage: number; discountAmount: number } 
+  }> {
+    // Calculate subtotal from items (after item-level discounts)
+    let subtotal = 0;
+    
+    for (const item of items) {
+      const quantity = parseFloat(item.quantity);
+      const unitPrice = parseFloat(item.unitPrice);
+      const lineSubtotal = quantity * unitPrice;
+      
+      // Handle item-level discount
+      const itemDiscountType = item.discountType || 'fixed';
+      const itemDiscountValue = itemDiscountType === 'percentage'
+        ? (item.discountPercentage || '0')
+        : (item.discount || '0');
+      
+      const itemDiscount = calculateDiscountWithConversion(
+        lineSubtotal,
+        itemDiscountValue,
+        itemDiscountType
+      );
+      
+      subtotal += (lineSubtotal - itemDiscount.discountAmount);
+    }
+
+    // Apply global discount with conversion
+    const globalDiscountType = discountType || 'fixed';
+    const globalDiscountValue = globalDiscountType === 'percentage'
+      ? (discountPercentage || '0')
+      : (discountValue || '0');
+    
+    const globalDiscount = calculateDiscountWithConversion(
+      subtotal,
+      globalDiscountValue,
+      globalDiscountType
+    );
+
+    const total = Math.max(0, subtotal - globalDiscount.discountAmount);
+
+    return {
+      subtotal: roundMoney(subtotal),
+      total: roundMoney(total),
+      globalDiscount,
     };
   }
 
