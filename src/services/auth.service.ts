@@ -49,6 +49,7 @@ class AuthServiceImpl implements AuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      permissions: user.permissions,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -65,7 +66,7 @@ class AuthServiceImpl implements AuthService {
    * @returns Promise that resolves to created user data
    */
   async register(userData: CreateUserData): Promise<User> {
-    const { email, password, name, role } = userData;
+    const { email, password, name, role, permissions } = userData;
 
     // Check if user already exists
     const existingUser = await db
@@ -89,6 +90,7 @@ class AuthServiceImpl implements AuthService {
         password: hashedPassword,
         name,
         role,
+        permissions: permissions || null,
       })
       .returning();
 
@@ -112,21 +114,67 @@ class AuthServiceImpl implements AuthService {
    */
   async validateToken(token: string): Promise<User> {
     try {
-      // Verify and decode token
-      const payload = await verifyToken(token);
+      // Basic token format validation
+      if (!token || typeof token !== 'string' || token.trim() === '') {
+        throw new Error('Token is required and must be a non-empty string');
+      }
 
-      // Find user by ID from token
-      const userResult = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, payload.userId))
-        .limit(1);
+      // Remove Bearer prefix if present (defensive programming)
+      const cleanToken = token.startsWith('Bearer ') ? token.substring(7) : token;
+
+      if (!cleanToken) {
+        throw new Error('Invalid token format');
+      }
+
+      // Verify and decode token with detailed error handling
+      let payload: any;
+      try {
+        payload = await verifyToken(cleanToken);
+      } catch (jwtError: any) {
+        // Provide more specific error messages for different JWT errors
+        if (jwtError.name === 'TokenExpiredError') {
+          throw new Error('Token has expired');
+        } else if (jwtError.name === 'JsonWebTokenError') {
+          throw new Error('Invalid token format or signature');
+        } else if (jwtError.name === 'NotBeforeError') {
+          throw new Error('Token is not active yet');
+        } else {
+          throw new Error('Token validation failed');
+        }
+      }
+
+      // Validate payload structure
+      if (!payload || !payload.userId) {
+        throw new Error('Invalid token payload: missing userId');
+      }
+
+      // Find user by ID from token with better error handling
+      let userResult;
+      try {
+        userResult = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, payload.userId))
+          .limit(1);
+      } catch (dbError) {
+        throw new Error('Database error while validating user');
+      }
 
       if (userResult.length === 0) {
-        throw new Error('User not found');
+        throw new Error('User not found or has been deactivated');
       }
 
       const user = userResult[0];
+
+      // Additional security checks
+      if (!user.id || !user.email) {
+        throw new Error('Invalid user data retrieved from database');
+      }
+
+      // Verify token email matches user email (additional security)
+      if (payload.email && payload.email !== user.email) {
+        throw new Error('Token email mismatch with user data');
+      }
 
       // Return user data without password
       return {
@@ -134,11 +182,28 @@ class AuthServiceImpl implements AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        permissions: user.permissions,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };
     } catch (error) {
-      throw new Error('Invalid or expired token');
+      // Log the error for debugging but don't expose internal details
+      console.error('Token validation error:', error);
+
+      // Re-throw with generic message if it's not already a user-friendly message
+      if (error instanceof Error && (
+        error.message.includes('expired') ||
+        error.message.includes('invalid') ||
+        error.message.includes('required') ||
+        error.message.includes('format') ||
+        error.message.includes('not found') ||
+        error.message.includes('deactivated') ||
+        error.message.includes('mismatch')
+      )) {
+        throw error;
+      }
+
+      throw new Error('Authentication failed');
     }
   }
 

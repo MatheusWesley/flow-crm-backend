@@ -68,7 +68,7 @@ const updatePreSaleItemSchema = z.object({
 // Create pre-sale schema
 export const createPreSaleSchema = z.object({
   customerId: uuidSchema,
-  status: preSaleStatusSchema.optional().default('pending'),
+  status: preSaleStatusSchema.optional().default('pending'), // Sempre inicia como pending
   discount: decimalStringSchema
     .optional()
     .default('0')
@@ -335,7 +335,7 @@ export type ValidationErrorDetails = z.infer<typeof validationErrorDetailsSchema
 export const validateStatusTransition = (currentStatus: PreSaleStatus, newStatus: PreSaleStatus): boolean => {
   const validTransitions: Record<PreSaleStatus, PreSaleStatus[]> = {
     draft: ['pending', 'cancelled'],
-    pending: ['approved', 'cancelled'],
+    pending: ['approved', 'cancelled', 'converted'], // Agora permite conversão direta de pending
     approved: ['converted', 'cancelled'],
     cancelled: [], // Cannot transition from cancelled
     converted: [], // Cannot transition from converted

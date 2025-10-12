@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { authService } from '../services/auth.service';
+import { authenticateUser, authenticateAdmin } from '../middlewares/auth.middleware';
 
 /**
  * Authentication routes
@@ -13,58 +14,90 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       const authResponse = await authService.login({ email, password });
 
       return reply.status(200).send({
-        user: authResponse.user,
-        token: authResponse.token,
+        success: true,
+        data: {
+          user: authResponse.user,
+          token: authResponse.token,
+        },
+        message: 'Login successful',
+        timestamp: new Date().toISOString()
       });
     } catch (error: any) {
       return reply.status(401).send({
-        message: error.message || 'Invalid credentials',
+        success: false,
+        error: {
+          code: 'LOGIN_FAILED',
+          message: error.message || 'Invalid credentials',
+        },
+        timestamp: new Date().toISOString(),
+        path: request.url
       });
     }
   });
 
-  // Register route
-  fastify.post('/register', async (request, reply) => {
+  // Register route (admin only)
+  fastify.post('/register', {
+    preHandler: authenticateAdmin
+  }, async (request, reply) => {
     try {
-      const { name, email, password, role } = request.body as any;
+      const { name, email, password, role, permissions } = request.body as any;
 
-      const user = await authService.register({ name, email, password, role });
+      const user = await authService.register({ name, email, password, role, permissions });
 
       return reply.status(201).send({
-        user,
+        success: true,
+        data: user,
+        message: 'User registered successfully',
+        timestamp: new Date().toISOString()
       });
     } catch (error: any) {
-      return reply.status(400).send({
-        message: error.message || 'Registration failed',
+      const errorMessage = error.message || 'Registration failed';
+      const statusCode = errorMessage.includes('already exists') ? 409 : 400;
+
+      return reply.status(statusCode).send({
+        success: false,
+        error: {
+          code: errorMessage.includes('already exists') ? 'USER_ALREADY_EXISTS' : 'REGISTRATION_FAILED',
+          message: errorMessage,
+        },
+        timestamp: new Date().toISOString(),
+        path: request.url
       });
     }
   });
 
-  // Get profile route
-  fastify.get('/profile', {
-    preHandler: async (request, reply) => {
-      try {
-        const token = request.headers.authorization?.replace('Bearer ', '');
-        if (!token) {
-          return reply.status(401).send({ message: 'No token provided' });
-        }
-
-        const user = await authService.validateToken(token);
-        (request as any).user = user;
-      } catch (error) {
-        return reply.status(401).send({ message: 'Invalid token' });
-      }
-    }
+  // Get current user profile - /me endpoint (expected by frontend)
+  fastify.get('/me', {
+    preHandler: authenticateUser
   }, async (request, reply) => {
-    return reply.status(200).send((request as any).user);
+    return reply.status(200).send({
+      success: true,
+      data: request.user,
+      message: 'Profile retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Legacy profile endpoint (for backwards compatibility)
+  fastify.get('/profile', {
+    preHandler: authenticateUser
+  }, async (request, reply) => {
+    return reply.status(200).send({
+      success: true,
+      data: request.user,
+      message: 'Profile retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
   });
 
   // Logout route
   fastify.post('/logout', async (request, reply) => {
     return reply.status(200).send({
+      success: true,
       message: 'Logout successful',
+      timestamp: new Date().toISOString()
     });
   });
 
-  fastify.log.info('Auth routes registered');
+  fastify.log.info('Auth routes registered with improved middleware');
 }

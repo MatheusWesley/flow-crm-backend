@@ -7,6 +7,7 @@ export interface User {
   email: string;
   name: string;
   role: 'admin' | 'manager' | 'employee';
+  permissions?: any;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,6 +17,7 @@ export interface CreateUserData {
   password: string;
   name: string;
   role: 'admin' | 'manager' | 'employee';
+  permissions?: any;
 }
 
 export interface LoginCredentials {

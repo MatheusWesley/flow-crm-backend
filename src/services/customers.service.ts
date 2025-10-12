@@ -85,10 +85,11 @@ export class CustomerService {
       conditions.push(ilike(customers.cpf, `%${cleanedCpf}%`));
     }
 
-    // Global search across name, email, and CPF
+    // Global search across name, email, and CPF (same pattern as products)
     if (search) {
       const searchTerm = `%${search}%`;
       const cleanedSearchCpf = cleanCpf(search);
+
       conditions.push(
         or(
           ilike(customers.name, searchTerm),

@@ -343,6 +343,27 @@ describe('PreSales Service Database Integration', () => {
             expect(finalPreSale.status).toBe('converted');
         });
 
+        it('should allow direct conversion from pending to converted', async () => {
+            // Create a new presale for this test
+            const newPreSale = await preSalesService.create({
+                customerId: customerId,
+                status: 'pending',
+                discount: '0',
+                discountType: 'fixed',
+                discountPercentage: '0',
+                notes: 'Test direct conversion',
+                items: [{
+                    productId: productId,
+                    quantity: '1',
+                    unitPrice: '10.00'
+                }]
+            });
+
+            // pending -> converted (nova transição permitida)
+            const convertedPreSale = await preSalesService.updateStatus(newPreSale.id, 'converted');
+            expect(convertedPreSale.status).toBe('converted');
+        });
+
         it('should reject invalid status transitions', async () => {
             // Try to go from draft directly to converted (invalid)
             await expect(

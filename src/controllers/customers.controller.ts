@@ -30,19 +30,26 @@ export class CustomerController {
    */
   async getCustomers(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
+      console.log('Raw query params:', request.query);
+
       // Validate query parameters
       const filtersValidation = validateCustomerFilters(request.query);
-      
+
       if (!filtersValidation.success) {
+        console.log('Validation failed:', filtersValidation.error);
         const errorMessage = getValidationErrorMessage(filtersValidation.error);
         const errorDetails = getValidationErrorDetails(filtersValidation.error);
         return sendValidationError(reply, errorMessage, errorDetails);
       }
 
       const filters = filtersValidation.data;
+      console.log('Validated filters:', filters);
 
       const customers = await customerService.findAll(filters);
       const total = await customerService.count(filters);
+
+      console.log('Found customers:', customers.length, 'Total:', total);
+      console.log('First customer names:', customers.slice(0, 3).map(c => c.name));
 
       return sendPaginated(
         reply,
@@ -67,7 +74,7 @@ export class CustomerController {
     try {
       // Validate customer ID parameter
       const paramsValidation = validateCustomerId(request.params);
-      
+
       if (!paramsValidation.success) {
         const errorMessage = getValidationErrorMessage(paramsValidation.error);
         const errorDetails = getValidationErrorDetails(paramsValidation.error);
@@ -98,7 +105,7 @@ export class CustomerController {
     try {
       // Validate request body
       const bodyValidation = validateCreateCustomer(request.body);
-      
+
       if (!bodyValidation.success) {
         const errorMessage = getValidationErrorMessage(bodyValidation.error);
         const errorDetails = getValidationErrorDetails(bodyValidation.error);
@@ -139,7 +146,7 @@ export class CustomerController {
     try {
       // Validate customer ID parameter
       const paramsValidation = validateCustomerId(request.params);
-      
+
       if (!paramsValidation.success) {
         const errorMessage = getValidationErrorMessage(paramsValidation.error);
         const errorDetails = getValidationErrorDetails(paramsValidation.error);
@@ -148,7 +155,7 @@ export class CustomerController {
 
       // Validate request body
       const bodyValidation = validateUpdateCustomer(request.body);
-      
+
       if (!bodyValidation.success) {
         const errorMessage = getValidationErrorMessage(bodyValidation.error);
         const errorDetails = getValidationErrorDetails(bodyValidation.error);
@@ -194,7 +201,7 @@ export class CustomerController {
     try {
       // Validate customer ID parameter
       const paramsValidation = validateCustomerId(request.params);
-      
+
       if (!paramsValidation.success) {
         const errorMessage = getValidationErrorMessage(paramsValidation.error);
         const errorDetails = getValidationErrorDetails(paramsValidation.error);

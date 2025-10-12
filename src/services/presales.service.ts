@@ -140,7 +140,7 @@ export class PreSalesService {
   /**
    * Find all pre-sales with optional filtering
    */
-  async findAll(filters: PreSalesFilters = {}): Promise<PreSale[]> {
+  async findAll(filters: PreSalesFilters = {}): Promise<PreSaleWithItems[]> {
     const {
       page = 1,
       limit = 50,
@@ -206,15 +206,104 @@ export class PreSalesService {
     // Apply pagination
     const offset = (page - 1) * limit;
 
-    const result = await db
-      .select()
+    // Get pre-sales with customer data
+    const preSaleResults = await db
+      .select({
+        id: preSales.id,
+        customerId: preSales.customerId,
+        status: preSales.status,
+        total: preSales.total,
+        discount: preSales.discount,
+        discountType: preSales.discountType,
+        discountPercentage: preSales.discountPercentage,
+        notes: preSales.notes,
+        createdAt: preSales.createdAt,
+        updatedAt: preSales.updatedAt,
+        customerName: customers.name,
+        customerEmail: customers.email,
+        customerCpf: customers.cpf,
+      })
       .from(preSales)
+      .innerJoin(customers, eq(preSales.customerId, customers.id))
       .where(whereCondition)
       .orderBy(orderBy)
       .limit(limit)
       .offset(offset);
 
-    return result;
+    // Get items for all pre-sales in a single query
+    const preSaleIds = preSaleResults.map(ps => ps.id);
+
+    let itemsResults: any[] = [];
+    if (preSaleIds.length > 0) {
+      itemsResults = await db
+        .select({
+          id: preSaleItems.id,
+          preSaleId: preSaleItems.preSaleId,
+          productId: preSaleItems.productId,
+          quantity: preSaleItems.quantity,
+          unitPrice: preSaleItems.unitPrice,
+          totalPrice: preSaleItems.totalPrice,
+          discount: preSaleItems.discount,
+          discountType: preSaleItems.discountType,
+          discountPercentage: preSaleItems.discountPercentage,
+          productCode: products.code,
+          productName: products.name,
+          productUnit: products.unit,
+          productStock: products.stock,
+        })
+        .from(preSaleItems)
+        .innerJoin(products, eq(preSaleItems.productId, products.id))
+        .where(inArray(preSaleItems.preSaleId, preSaleIds));
+    }
+
+    // Group items by pre-sale ID
+    const itemsByPresaleId = itemsResults.reduce((acc, item) => {
+      if (!acc[item.preSaleId]) {
+        acc[item.preSaleId] = [];
+      }
+      acc[item.preSaleId].push({
+        id: item.id,
+        preSaleId: item.preSaleId,
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        discount: item.discount,
+        discountType: item.discountType,
+        discountPercentage: item.discountPercentage,
+        product: {
+          id: item.productId,
+          code: item.productCode,
+          name: item.productName,
+          unit: item.productUnit,
+          stock: item.productStock,
+        },
+      });
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    // Format the response
+    const results: PreSaleWithItems[] = preSaleResults.map((preSale) => ({
+      id: preSale.id,
+      customerId: preSale.customerId,
+      status: preSale.status,
+      total: preSale.total,
+      discount: preSale.discount,
+      discountType: preSale.discountType,
+      discountPercentage: preSale.discountPercentage,
+      notes: preSale.notes,
+      createdAt: preSale.createdAt,
+      updatedAt: preSale.updatedAt,
+      customer: {
+        id: preSale.customerId,
+        name: preSale.customerName,
+        email: preSale.customerEmail,
+        cpf: preSale.customerCpf,
+      },
+      items: itemsByPresaleId[preSale.id] || [],
+    }));
+
+    return results;
   }
 
   /**
@@ -350,19 +439,19 @@ export class PreSalesService {
       const quantity = parseFloat(item.quantity);
       const unitPrice = parseFloat(item.unitPrice);
       const lineSubtotal = quantity * unitPrice;
-      
+
       // Calculate discount with conversion
       const itemDiscountType = item.discountType || 'fixed';
-      const itemDiscountValue = itemDiscountType === 'percentage' 
+      const itemDiscountValue = itemDiscountType === 'percentage'
         ? (item.discountPercentage || '0')
         : (item.discount || '0');
-      
+
       const discountCalc = calculateDiscountWithConversion(
         lineSubtotal,
         itemDiscountValue,
         itemDiscountType
       );
-      
+
       const totalPrice = lineSubtotal - discountCalc.discountAmount;
 
       return {
@@ -426,19 +515,19 @@ export class PreSalesService {
         const quantity = parseFloat(item.quantity);
         const unitPrice = parseFloat(item.unitPrice);
         const lineSubtotal = quantity * unitPrice;
-        
+
         // Calculate discount with conversion
         const itemDiscountType = item.discountType || 'fixed';
-        const itemDiscountValue = itemDiscountType === 'percentage' 
+        const itemDiscountValue = itemDiscountType === 'percentage'
           ? (item.discountPercentage || '0')
           : (item.discount || '0');
-        
+
         const discountCalc = calculateDiscountWithConversion(
           lineSubtotal,
           itemDiscountValue,
           itemDiscountType
         );
-        
+
         const totalPrice = lineSubtotal - discountCalc.discountAmount;
 
         return {
@@ -460,14 +549,14 @@ export class PreSalesService {
       const discountValue = preSaleData.discountType === 'percentage'
         ? preSaleData.discountPercentage
         : preSaleData.discount;
-      
+
       const { subtotal, total, globalDiscount } = await this.calculateTotalsWithConversion(
         preSaleData.items,
         discountValue,
         discountType,
         preSaleData.discountPercentage
       );
-      
+
       updateData.total = total.toString();
       updateData.discount = globalDiscount.fixedValue.toString();
       updateData.discountPercentage = globalDiscount.percentage.toString();
@@ -498,14 +587,14 @@ export class PreSalesService {
           discountType: item.discountType,
           discountPercentage: item.discountPercentage,
         }));
-        
+
         const { subtotal, total, globalDiscount } = await this.calculateTotalsWithConversion(
           currentItems,
           newDiscountValue,
           newDiscountType,
           preSaleData.discountPercentage
         );
-        
+
         updateData.total = total.toString();
         updateData.discount = globalDiscount.fixedValue.toString();
         updateData.discountType = newDiscountType;
@@ -613,31 +702,31 @@ export class PreSalesService {
     discountValue?: string,
     discountType?: DiscountType,
     discountPercentage?: string
-  ): Promise<{ 
-    subtotal: number; 
-    total: number; 
-    globalDiscount: { fixedValue: number; percentage: number; discountAmount: number } 
+  ): Promise<{
+    subtotal: number;
+    total: number;
+    globalDiscount: { fixedValue: number; percentage: number; discountAmount: number }
   }> {
     // Calculate subtotal from items (after item-level discounts)
     let subtotal = 0;
-    
+
     for (const item of items) {
       const quantity = parseFloat(item.quantity);
       const unitPrice = parseFloat(item.unitPrice);
       const lineSubtotal = quantity * unitPrice;
-      
+
       // Handle item-level discount
       const itemDiscountType = item.discountType || 'fixed';
       const itemDiscountValue = itemDiscountType === 'percentage'
         ? (item.discountPercentage || '0')
         : (item.discount || '0');
-      
+
       const itemDiscount = calculateDiscountWithConversion(
         lineSubtotal,
         itemDiscountValue,
         itemDiscountType
       );
-      
+
       subtotal += (lineSubtotal - itemDiscount.discountAmount);
     }
 
@@ -646,7 +735,7 @@ export class PreSalesService {
     const globalDiscountValue = globalDiscountType === 'percentage'
       ? (discountPercentage || '0')
       : (discountValue || '0');
-    
+
     const globalDiscount = calculateDiscountWithConversion(
       subtotal,
       globalDiscountValue,
@@ -750,9 +839,14 @@ export class PreSalesService {
    * Private method to validate status transitions
    */
   private validateStatusTransition(currentStatus: PreSaleStatus, newStatus: PreSaleStatus): void {
+    // Allow same status (no transition)
+    if (currentStatus === newStatus) {
+      return;
+    }
+
     const validTransitions: Record<PreSaleStatus, PreSaleStatus[]> = {
       draft: ['pending', 'cancelled'],
-      pending: ['approved', 'cancelled'],
+      pending: ['approved', 'cancelled', 'converted'], // Agora permite conversão direta de pending
       approved: ['converted', 'cancelled'],
       cancelled: [], // Cannot transition from cancelled
       converted: [], // Cannot transition from converted
