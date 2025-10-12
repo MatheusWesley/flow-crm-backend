@@ -1,6 +1,7 @@
 import { pgTable, uuid, decimal, text, timestamp, pgEnum } from 'drizzle-orm/pg-core';
 import { customers } from './customers';
 import { products } from './products';
+import { paymentMethods } from './payment-methods';
 
 export const presaleStatusEnum = pgEnum('presale_status', ['draft', 'pending', 'approved', 'cancelled', 'converted']);
 export const discountTypeEnum = pgEnum('discount_type', ['fixed', 'percentage']);
@@ -8,6 +9,7 @@ export const discountTypeEnum = pgEnum('discount_type', ['fixed', 'percentage'])
 export const preSales = pgTable('presales', {
   id: uuid('id').primaryKey().defaultRandom(),
   customerId: uuid('customer_id').references(() => customers.id).notNull(),
+  paymentMethodId: uuid('payment_method_id').references(() => paymentMethods.id),
   status: presaleStatusEnum('status').notNull(),
   total: decimal('total', { precision: 10, scale: 2 }).notNull(),
   discount: decimal('discount', { precision: 10, scale: 2 }).default('0').notNull(),
