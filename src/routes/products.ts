@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { productController } from '../controllers/products.controller';
+import { stockAdjustmentController } from '../controllers/stock-adjustment.controller';
 import { authenticateUser } from '../middlewares/auth.middleware';
+import { stockAdjustmentRateLimit } from '../middlewares/rate-limit.middleware';
 
 /**
  * Product routes using controller pattern for consistent API responses
@@ -32,5 +34,12 @@ export async function productRoutes(fastify: FastifyInstance): Promise<void> {
     return productController.deleteProduct(request, reply);
   });
 
-  fastify.log.info('Product routes registered with standardized response format');
+  // Stock adjustment endpoint with rate limiting
+  fastify.post('/:id/stock-adjustment', {
+    preHandler: [authenticateUser, stockAdjustmentRateLimit]
+  }, async (request, reply) => {
+    return stockAdjustmentController.adjustStock(request, reply);
+  });
+
+  fastify.log.info('Product routes registered with standardized response format and stock adjustment endpoint');
 }

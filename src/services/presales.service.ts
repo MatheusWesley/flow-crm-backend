@@ -12,6 +12,8 @@ import {
   calculateDiscountWithConversion,
   DiscountType as CalcDiscountType
 } from '../utils/presales-calculations';
+import { stockAdjustmentService } from './stock-adjustment.service';
+import { stockAdjustments } from '../db/schema/stock-adjustments';
 
 /**
  * Discount type
@@ -660,17 +662,37 @@ export class PreSalesService {
     // Validate status transition
     this.validateStatusTransition(existingPreSale[0].status, status);
 
-    // Update status
-    const result = await db
-      .update(preSales)
-      .set({
-        status,
-        updatedAt: new Date(),
-      })
-      .where(eq(preSales.id, id))
-      .returning();
+    // Use transaction to ensure atomicity when converting to "converted" status
+    if (status === 'converted' && existingPreSale[0].status !== 'converted') {
+      return await db.transaction(async (tx) => {
+        // First, validate and reduce stock
+        await this.processStockReductionForSaleInTransaction(id, tx);
 
-    return result[0];
+        // Then update status
+        const result = await tx
+          .update(preSales)
+          .set({
+            status,
+            updatedAt: new Date(),
+          })
+          .where(eq(preSales.id, id))
+          .returning();
+
+        return result[0];
+      });
+    } else {
+      // For other status changes, no transaction needed
+      const result = await db
+        .update(preSales)
+        .set({
+          status,
+          updatedAt: new Date(),
+        })
+        .where(eq(preSales.id, id))
+        .returning();
+
+      return result[0];
+    }
   }
 
   /**
@@ -855,6 +877,153 @@ export class PreSalesService {
     const allowedTransitions = validTransitions[currentStatus];
     if (!allowedTransitions.includes(newStatus)) {
       throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}`);
+    }
+  }
+
+  /**
+   * Private method to process automatic stock reduction when a sale is completed
+   */
+  private async processStockReductionForSale(preSaleId: string): Promise<void> {
+    // Get pre-sale with items
+    const preSale = await this.findById(preSaleId);
+    if (!preSale) {
+      throw new Error('Pre-sale not found for stock reduction');
+    }
+
+    // Validate stock availability before processing
+    for (const item of preSale.items) {
+      const quantityToReduce = parseFloat(item.quantity);
+
+      if (item.product.stock < quantityToReduce) {
+        throw new Error(
+          `Insufficient stock for product ${item.product.name} (${item.product.code}). ` +
+          `Available: ${item.product.stock}, Required: ${quantityToReduce}`
+        );
+      }
+    }
+
+    // Process stock reduction for each item
+    for (const item of preSale.items) {
+      const quantityToReduce = parseFloat(item.quantity);
+
+      try {
+        await stockAdjustmentService.adjustStock(
+          item.productId,
+          {
+            adjustmentType: 'remove',
+            quantity: quantityToReduce,
+            reason: `Venda finalizada - Pré-venda #${preSaleId.substring(0, 8)}`
+          },
+          'system', // userId - using system for automatic adjustments
+          'Sistema de Vendas', // userName
+          undefined, // ipAddress
+          'Automatic Stock Reduction' // userAgent
+        );
+      } catch (error) {
+        console.error(`Failed to reduce stock for product ${item.productId}:`, error);
+        throw new Error(
+          `Failed to reduce stock for product ${item.product.name}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Private method to process automatic stock reduction within a transaction
+   */
+  private async processStockReductionForSaleInTransaction(preSaleId: string, tx: any): Promise<void> {
+    // Get pre-sale with items (using the transaction)
+    const preSaleResult = await tx
+      .select({
+        id: preSales.id,
+        customerId: preSales.customerId,
+        status: preSales.status,
+        total: preSales.total,
+        discount: preSales.discount,
+        discountType: preSales.discountType,
+        discountPercentage: preSales.discountPercentage,
+        notes: preSales.notes,
+        createdAt: preSales.createdAt,
+        updatedAt: preSales.updatedAt,
+      })
+      .from(preSales)
+      .where(eq(preSales.id, preSaleId))
+      .limit(1);
+
+    if (preSaleResult.length === 0) {
+      throw new Error('Pre-sale not found for stock reduction');
+    }
+
+    // Get pre-sale items with product data (using the transaction)
+    const itemsResult = await tx
+      .select({
+        id: preSaleItems.id,
+        preSaleId: preSaleItems.preSaleId,
+        productId: preSaleItems.productId,
+        quantity: preSaleItems.quantity,
+        unitPrice: preSaleItems.unitPrice,
+        totalPrice: preSaleItems.totalPrice,
+        discount: preSaleItems.discount,
+        discountType: preSaleItems.discountType,
+        discountPercentage: preSaleItems.discountPercentage,
+        productCode: products.code,
+        productName: products.name,
+        productUnit: products.unit,
+        productStock: products.stock,
+      })
+      .from(preSaleItems)
+      .innerJoin(products, eq(preSaleItems.productId, products.id))
+      .where(eq(preSaleItems.preSaleId, preSaleId));
+
+    // Validate stock availability before processing
+    for (const item of itemsResult) {
+      const quantityToReduce = parseFloat(item.quantity);
+
+      if (item.productStock < quantityToReduce) {
+        throw new Error(
+          `Insufficient stock for product ${item.productName} (${item.productCode}). ` +
+          `Available: ${item.productStock}, Required: ${quantityToReduce}`
+        );
+      }
+    }
+
+    // Process stock reduction for each item within the transaction
+    for (const item of itemsResult) {
+      const quantityToReduce = parseFloat(item.quantity);
+      const newStock = item.productStock - quantityToReduce;
+
+      try {
+        // Update product stock directly in the transaction
+        await tx
+          .update(products)
+          .set({
+            stock: newStock,
+            updatedAt: new Date()
+          })
+          .where(eq(products.id, item.productId));
+
+        // Create stock adjustment record in the transaction
+        await tx
+          .insert(stockAdjustments)
+          .values({
+            productId: item.productId,
+            adjustmentType: 'remove',
+            quantity: quantityToReduce,
+            previousStock: item.productStock,
+            newStock: newStock,
+            reason: `Venda finalizada - Pré-venda #${preSaleId.substring(0, 8)}`,
+            userId: null, // system adjustment
+            userName: 'Sistema de Vendas',
+            ipAddress: null,
+            userAgent: 'Automatic Stock Reduction'
+          });
+
+      } catch (error) {
+        console.error(`Failed to reduce stock for product ${item.productId}:`, error);
+        throw new Error(
+          `Failed to reduce stock for product ${item.productName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
     }
   }
 }

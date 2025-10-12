@@ -8,6 +8,7 @@ import { monitoringRoutes } from './monitoring';
 import { paymentMethodsRoutes } from './payment-methods';
 import { auditLogsRoutes } from './audit-logs';
 import { userRoutes } from './users';
+import { stockAdjustmentRoutes } from './stock-adjustments';
 
 export const registerRoutes: FastifyPluginAsync = async (fastify) => {
   // Register API routes here
@@ -41,6 +42,9 @@ export const registerRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Register user management routes
   await fastify.register(userRoutes, { prefix: '/api/users' });
+
+  // Register stock adjustment routes
+  await fastify.register(stockAdjustmentRoutes, { prefix: '/api/stock-adjustments' });
 
   fastify.log.info('All routes registered successfully');
 };

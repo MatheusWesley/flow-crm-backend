@@ -5,3 +5,4 @@ export * from './products';
 export * from './presales';
 export * from './payment-methods';
 export * from './audit-logs';
+export * from './stock-adjustments';
