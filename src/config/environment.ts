@@ -7,6 +7,7 @@ const environmentSchema = z.object({
   DATABASE_URL: z.string().url('Invalid DATABASE_URL format'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
   JWT_EXPIRES_IN: z.string().default('24h'),
+  FRONTEND_URL: z.string().url('Invalid FRONTEND_URL format').optional(),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

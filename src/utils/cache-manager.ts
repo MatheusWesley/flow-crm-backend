@@ -250,8 +250,8 @@ export class CacheManager<T> {
  * Product cache for frequently accessed product data
  */
 export const productCache = new CacheManager<any>({
-    maxSize: 500,
-    defaultTtl: 5 * 60 * 1000, // 5 minutes
+    maxSize: 1000, // Increased from 500
+    defaultTtl: 15 * 60 * 1000, // Increased to 15 minutes
     cleanupInterval: 2 * 60 * 1000 // 2 minutes
 });
 
@@ -259,8 +259,8 @@ export const productCache = new CacheManager<any>({
  * Customer cache for frequently accessed customer data
  */
 export const customerCache = new CacheManager<any>({
-    maxSize: 200,
-    defaultTtl: 10 * 60 * 1000, // 10 minutes
+    maxSize: 500, // Increased from 200
+    defaultTtl: 30 * 60 * 1000, // Increased to 30 minutes
     cleanupInterval: 5 * 60 * 1000 // 5 minutes
 });
 
@@ -413,3 +413,71 @@ export class CacheMonitor {
 setInterval(() => {
     CacheMonitor.logPerformanceMetrics();
 }, 10 * 60 * 1000); // Every 10 minutes
+/**
+
+ * Cache preloader for warming up caches with popular data
+ */
+export class CachePreloader {
+    /**
+     * Preload popular products into cache
+     */
+    static async preloadPopularProducts(db: any): Promise<void> {
+        try {
+            // Get most accessed products (you can adjust this query based on your needs)
+            const popularProducts = await db.select()
+                .from('products')
+                .limit(100); // Preload top 100 products
+
+            for (const product of popularProducts) {
+                const cacheKey = `product:${product.id}`;
+                productCache.set(cacheKey, product, 30 * 60 * 1000); // 30 minutes TTL
+            }
+
+            console.log(`[CACHE_PRELOADER] Preloaded ${popularProducts.length} popular products`);
+        } catch (error) {
+            console.error('[CACHE_PRELOADER] Error preloading products:', error);
+        }
+    }
+
+    /**
+     * Preload active customers into cache
+     */
+    static async preloadActiveCustomers(db: any): Promise<void> {
+        try {
+            // Get most active customers (you can adjust this query based on your needs)
+            const activeCustomers = await db.select()
+                .from('customers')
+                .limit(50); // Preload top 50 customers
+
+            for (const customer of activeCustomers) {
+                const cacheKey = `customer:${customer.id}`;
+                customerCache.set(cacheKey, customer, 60 * 60 * 1000); // 1 hour TTL
+            }
+
+            console.log(`[CACHE_PRELOADER] Preloaded ${activeCustomers.length} active customers`);
+        } catch (error) {
+            console.error('[CACHE_PRELOADER] Error preloading customers:', error);
+        }
+    }
+
+    /**
+     * Preload all popular data
+     */
+    static async preloadAll(db: any): Promise<void> {
+        console.log('[CACHE_PRELOADER] Starting cache preloading...');
+
+        await Promise.all([
+            this.preloadPopularProducts(db),
+            this.preloadActiveCustomers(db)
+        ]);
+
+        console.log('[CACHE_PRELOADER] Cache preloading completed');
+    }
+}
+
+// Schedule cache preloading every hour
+setInterval(async () => {
+    // Note: You'll need to pass the database instance here
+    // This is just a placeholder - implement based on your app structure
+    console.log('[CACHE_PRELOADER] Scheduled cache refresh triggered');
+}, 60 * 60 * 1000); // Every hour
