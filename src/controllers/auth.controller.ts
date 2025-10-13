@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { authService } from '../services/auth.service.js';
-import { LoginRequest, RegisterRequest } from '../schemas/auth.schemas.js';
+import { authService } from '../services/auth.service';
+import { LoginRequest, RegisterRequest } from '../schemas/auth.schemas';
 import '../types/fastify';
 
 /**

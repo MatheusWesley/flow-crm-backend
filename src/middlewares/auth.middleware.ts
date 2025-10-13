@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { authService } from '../services/auth.service.js';
-import type { User } from '../types/auth.types.js';
+import { authService } from '../services/auth.service';
+import type { User } from '../types/auth.types';
 
 /**
  * Authentication middleware factory

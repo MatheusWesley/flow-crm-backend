@@ -1,5 +1,5 @@
-import jwt, { SignOptions } from 'jsonwebtoken';
-import { jwtConfig, JwtPayload } from '../config/jwt.js';
+import jwt, { SignOptions, JwtPayload as JwtLibPayload } from 'jsonwebtoken';
+import { jwtConfig, JwtPayload } from '../config/jwt';
 
 /**
  * JWT token generation and validation utilities
@@ -19,7 +19,7 @@ export const generateToken = async (payload: Omit<JwtPayload, 'iat' | 'exp' | 'i
         expiresIn: jwtConfig.expiresIn,
         issuer: jwtConfig.issuer,
       } as SignOptions,
-      (error, token) => {
+      (error: Error | null, token?: string) => {
         if (error) {
           reject(error);
         } else {
@@ -43,7 +43,7 @@ export const verifyToken = async (token: string): Promise<JwtPayload> => {
       {
         issuer: jwtConfig.issuer,
       },
-      (error, decoded) => {
+      (error: Error | null, decoded?: JwtLibPayload | string) => {
         if (error) {
           reject(error);
         } else {
@@ -74,10 +74,10 @@ export const decodeToken = (token: string): JwtPayload | null => {
  */
 export const extractTokenFromHeader = (authHeader: string | undefined): string | null => {
   if (!authHeader) return null;
-  
+
   const parts = authHeader.split(' ');
   if (parts.length !== 2 || parts[0] !== 'Bearer') return null;
-  
+
   return parts[1];
 };
 
@@ -90,7 +90,7 @@ export const isTokenExpired = (token: string): boolean => {
   try {
     const decoded = jwt.decode(token) as JwtPayload;
     if (!decoded || !decoded.exp) return true;
-    
+
     const currentTime = Math.floor(Date.now() / 1000);
     return decoded.exp < currentTime;
   } catch (error) {
