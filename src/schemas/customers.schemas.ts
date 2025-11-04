@@ -39,7 +39,10 @@ const baseCustomerSchema = {
     .max(14, 'CPF must be less than 14 characters')
     .trim()
     .regex(/^[\d\.\-]+$/, 'CPF must contain only numbers, dots, and hyphens')
-    .refine(cpfValidation, 'Invalid CPF format or check digits'),
+    .refine(cpfValidation, 'Invalid CPF format or check digits')
+    .optional()
+    .nullable()
+    .transform(cpf => cpf === '' ? null : cpf),
 
   address: z
     .string()

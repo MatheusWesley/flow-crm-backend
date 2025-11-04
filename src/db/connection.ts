@@ -8,6 +8,7 @@ import { getDatabaseConnectionManager } from '../utils/database-connection-manag
 // Note: In production, use the connection manager from the database plugin
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
+  ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 // Create Drizzle database instance

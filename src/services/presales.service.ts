@@ -68,7 +68,7 @@ export interface PreSaleWithItems extends PreSale {
     id: string;
     name: string;
     email: string;
-    cpf: string;
+    cpf: string | null;
   };
 }
 
@@ -300,7 +300,7 @@ export class PreSalesService {
         id: preSale.customerId,
         name: preSale.customerName,
         email: preSale.customerEmail,
-        cpf: preSale.customerCpf,
+        cpf: preSale.customerCpf || null,
       },
       items: itemsByPresaleId[preSale.id] || [],
     }));
@@ -377,7 +377,7 @@ export class PreSalesService {
         id: preSale.customerId,
         name: preSale.customerName,
         email: preSale.customerEmail,
-        cpf: preSale.customerCpf,
+        cpf: preSale.customerCpf || null,
       },
       items: itemsResult.map((item: typeof itemsResult[0]) => ({
         id: item.id,

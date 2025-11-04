@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { customerService, CreateCustomerData, UpdateCustomerData } from '../src/services/customers.service';
 import { db, checkDatabaseConnection } from '../src/db/connection';
 import { customers } from '../src/db/schema/customers';
+import { sql } from 'drizzle-orm';
 
 describe('Customer Service Database Integration', () => {
     // Test data
@@ -21,6 +22,13 @@ describe('Customer Service Database Integration', () => {
         address: 'Av. Paulista, 456'
     };
 
+    const testCustomerWithoutCpf: CreateCustomerData = {
+        name: 'Pedro Oliveira',
+        email: 'pedro.oliveira@test.com',
+        phone: '(11) 77777-7777',
+        address: 'Rua das Palmeiras, 789'
+    };
+
     beforeAll(async () => {
         // Verify database connection
         const isConnected = await checkDatabaseConnection();
@@ -29,12 +37,23 @@ describe('Customer Service Database Integration', () => {
 
     beforeEach(async () => {
         // Clean up test data before each test
-        await db.delete(customers);
+        // First delete presales, then customers due to foreign key constraint
+        try {
+            await db.execute(sql`DELETE FROM presales`);
+            await db.delete(customers);
+        } catch (error) {
+            // Ignore errors during cleanup
+        }
     });
 
     afterAll(async () => {
         // Clean up test data after all tests
-        await db.delete(customers);
+        try {
+            await db.execute(sql`DELETE FROM presales`);
+            await db.delete(customers);
+        } catch (error) {
+            // Ignore errors during cleanup
+        }
     });
 
     describe('CRUD Operations', () => {
@@ -48,6 +67,20 @@ describe('Customer Service Database Integration', () => {
             expect(customer.phone).toBe(testCustomer1.phone);
             expect(customer.cpf).toBe('12345678909'); // CPF should be cleaned
             expect(customer.address).toBe(testCustomer1.address);
+            expect(customer.createdAt).toBeInstanceOf(Date);
+            expect(customer.updatedAt).toBeInstanceOf(Date);
+        });
+
+        it('should create a customer without CPF', async () => {
+            const customer = await customerService.create(testCustomerWithoutCpf);
+
+            expect(customer).toBeDefined();
+            expect(customer.id).toBeDefined();
+            expect(customer.name).toBe(testCustomerWithoutCpf.name);
+            expect(customer.email).toBe(testCustomerWithoutCpf.email.toLowerCase());
+            expect(customer.phone).toBe(testCustomerWithoutCpf.phone);
+            expect(customer.cpf).toBeNull(); // CPF should be null when not provided
+            expect(customer.address).toBe(testCustomerWithoutCpf.address);
             expect(customer.createdAt).toBeInstanceOf(Date);
             expect(customer.updatedAt).toBeInstanceOf(Date);
         });
@@ -147,6 +180,15 @@ describe('Customer Service Database Integration', () => {
             expect(customers[0].cpf).toBe('12345678909');
         });
 
+        it('should handle customers without CPF in search', async () => {
+            await customerService.create(testCustomerWithoutCpf);
+            const allCustomers = await customerService.findAll();
+
+            expect(allCustomers).toHaveLength(3); // 2 with CPF + 1 without CPF
+            const customerWithoutCpf = allCustomers.find(c => c.name === testCustomerWithoutCpf.name);
+            expect(customerWithoutCpf?.cpf).toBeNull();
+        });
+
         it('should perform global search across name, email, and CPF', async () => {
             // Test search by unique part of second customer's email
             const customers = await customerService.findAll({ search: '987.654' });
@@ -182,7 +224,7 @@ describe('Customer Service Database Integration', () => {
     });
 
     describe('CPF Uniqueness Constraint', () => {
-        it('should enforce CPF uniqueness on creation', async () => {
+        it('should enforce CPF uniqueness on creation when CPF is provided', async () => {
             await customerService.create(testCustomer1);
 
             const duplicateCustomer = {
@@ -195,7 +237,19 @@ describe('Customer Service Database Integration', () => {
             ).rejects.toThrow('CPF already exists');
         });
 
-        it('should enforce CPF uniqueness on update', async () => {
+        it('should allow multiple customers without CPF', async () => {
+            const customer1 = await customerService.create(testCustomerWithoutCpf);
+            const customer2 = await customerService.create({
+                ...testCustomerWithoutCpf,
+                name: 'Another Customer',
+                email: 'another@test.com'
+            });
+
+            expect(customer1.cpf).toBeNull();
+            expect(customer2.cpf).toBeNull();
+        });
+
+        it('should enforce CPF uniqueness on update when CPF is provided', async () => {
             const customer1 = await customerService.create(testCustomer1);
             const customer2 = await customerService.create(testCustomer2);
 
@@ -216,7 +270,19 @@ describe('Customer Service Database Integration', () => {
             expect(updatedCustomer.cpf).toBe('12345678909');
         });
 
-        it('should validate CPF format', async () => {
+        it('should allow removing CPF from customer', async () => {
+            const customer = await customerService.create(testCustomer1);
+
+            const updatedCustomer = await customerService.update(customer.id, {
+                cpf: '', // Empty string should be converted to null
+                name: 'Updated Name'
+            });
+
+            expect(updatedCustomer.name).toBe('Updated Name');
+            expect(updatedCustomer.cpf).toBeNull();
+        });
+
+        it('should validate CPF format when provided', async () => {
             const invalidCustomer = {
                 ...testCustomer1,
                 cpf: '123.456.789-00' // Invalid CPF
@@ -225,6 +291,11 @@ describe('Customer Service Database Integration', () => {
             await expect(
                 customerService.create(invalidCustomer)
             ).rejects.toThrow('Invalid CPF format');
+        });
+
+        it('should not validate CPF when not provided', async () => {
+            const customerWithoutCpf = await customerService.create(testCustomerWithoutCpf);
+            expect(customerWithoutCpf.cpf).toBeNull();
         });
     });
 

@@ -12,7 +12,7 @@ export interface Customer {
   name: string;
   email: string;
   phone: string;
-  cpf: string;
+  cpf?: string | null;
   address?: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -25,7 +25,7 @@ export interface CreateCustomerData {
   name: string;
   email: string;
   phone: string;
-  cpf: string;
+  cpf?: string | null;
   address?: string | null;
 }
 
@@ -36,7 +36,7 @@ export interface UpdateCustomerData {
   name?: string;
   email?: string;
   phone?: string;
-  cpf?: string;
+  cpf?: string | null;
   address?: string | null;
 }
 
@@ -144,15 +144,19 @@ export class CustomerService {
    * Create a new customer
    */
   async create(customerData: CreateCustomerData): Promise<Customer> {
-    // Validate and clean CPF
-    const cleanedCpf = cleanCpf(customerData.cpf);
+    let cleanedCpf: string | null = null;
 
-    if (!validateCpf(cleanedCpf)) {
-      throw new Error('Invalid CPF format');
+    // Validate and clean CPF only if provided
+    if (customerData.cpf && customerData.cpf.trim()) {
+      cleanedCpf = cleanCpf(customerData.cpf);
+
+      if (!validateCpf(cleanedCpf)) {
+        throw new Error('Invalid CPF format');
+      }
+
+      // Check for CPF uniqueness
+      await this.validateCpfUniqueness(cleanedCpf);
     }
-
-    // Check for CPF uniqueness
-    await this.validateCpfUniqueness(cleanedCpf);
 
     // Check for email uniqueness
     await this.validateEmailUniqueness(customerData.email.toLowerCase().trim());
@@ -207,15 +211,20 @@ export class CustomerService {
     }
 
     if (customerData.cpf !== undefined) {
-      const cleanedCpf = cleanCpf(customerData.cpf);
+      let cleanedCpf: string | null = null;
 
-      if (!validateCpf(cleanedCpf)) {
-        throw new Error('Invalid CPF format');
-      }
+      // Only validate if CPF is provided and not empty
+      if (customerData.cpf && customerData.cpf.trim()) {
+        cleanedCpf = cleanCpf(customerData.cpf);
 
-      // Check CPF uniqueness only if it's different from current CPF
-      if (cleanedCpf !== existingCustomer.cpf) {
-        await this.validateCpfUniqueness(cleanedCpf);
+        if (!validateCpf(cleanedCpf)) {
+          throw new Error('Invalid CPF format');
+        }
+
+        // Check CPF uniqueness only if it's different from current CPF
+        if (cleanedCpf !== existingCustomer.cpf) {
+          await this.validateCpfUniqueness(cleanedCpf);
+        }
       }
 
       updateData.cpf = cleanedCpf;
@@ -321,6 +330,8 @@ export class CustomerService {
    * Private method to validate CPF uniqueness
    */
   private async validateCpfUniqueness(cpf: string): Promise<void> {
+    if (!cpf) return; // Skip validation if CPF is empty
+
     const existing = await db
       .select({ id: customers.id })
       .from(customers)
